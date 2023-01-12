@@ -1,7 +1,7 @@
 {
-  "name": "purple-hats",
+  "name": "younglim-a11y",
   "main": "index.js",
-  "version": "1.0.0",
+  "version": "0.0.4",
   "type": "module",
   "dependencies": {
     "axe-core": "^4.6.2",
@@ -33,7 +33,19 @@
   "scripts": {
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest"
   },
-  "author": "",
+  "author": "younglim",
   "license": "ISC",
-  "description": ""
+  "description": "Purple HATS is a customisable, automated accessibility testing tool that allows software development teams to assess whether their products are user-friendly to persons with disabilities (PWDs).",
+  "repository": {
+    "type": "git",
+    "url": "git+https://younglim@github.com/younglim/younglim-a11y.git"
+  },
+  "keywords": [
+    "a11y",
+    "testing"
+  ],
+  "bugs": {
+    "url": "https://github.com/younglim/younglim-a11y/issues"
+  },
+  "homepage": "https://github.com/younglim/younglim-a11y#readme"
 }
