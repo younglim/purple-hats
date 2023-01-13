@@ -1,7 +1,11 @@
 FROM node:18.12.1-alpine3.16
 
 # Installation of packages for purple-hats and chromium
-RUN apk add --no-cache g++ make python3 chromium xvfb zip bash git
+RUN apk add --no-cache g++ make python3 chromium xvfb zip bash git 
+
+# Docker bits
+RUN apk add --update docker openrc
+RUN rc-update add docker boot
 
 WORKDIR /app
 
