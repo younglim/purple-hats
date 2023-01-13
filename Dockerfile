@@ -1,8 +1,7 @@
-# FROM node:16.15.1-alpine3.16
 FROM node:18.12.1-alpine3.16
 
 # Installation of packages for purple-hats and chromium
-RUN apk add --no-cache g++ make python3 chromium xvfb zip
+RUN apk add --no-cache g++ make python3 chromium xvfb zip bash git
 
 WORKDIR /app
 
@@ -12,7 +11,7 @@ COPY package*.json ./
 # Environment variables for node
 ENV NODE_ENV=production
 
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 COPY . .
 
