@@ -307,7 +307,7 @@ const scanInit = async (argvs: Answers): Promise<string> => {
   }
 
   if (process.env.RUNNING_FROM_PH_GUI || process.env.OOBEE_VERBOSE) {
-    let randomTokenMessage = {
+    const randomTokenMessage = {
       type: 'randomToken',
       payload: `${data.randomToken}`,
     };
