@@ -253,14 +253,10 @@ export const zipResults = (zipName, resultsPath) => {
   }
 
   if (os.platform() === 'win32') {
-    try {
-      execSync(
-        `Get-ChildItem -Path "${resultsPath}\\*.*" -Recurse | Compress-Archive -DestinationPath "${zipName}"`,
-        { shell: 'powershell.exe' },
-      );
-    } catch (err) {
-      throw err;
-    }
+    execSync(
+      `Get-ChildItem -Path "${resultsPath}\\*.*" -Recurse | Compress-Archive -DestinationPath "${zipName}"`,
+      { shell: 'powershell.exe' },
+    );
   } else {
     // Get zip command in Mac and Linux
     const command = '/usr/bin/zip';
@@ -275,12 +271,7 @@ export const zipResults = (zipName, resultsPath) => {
       cwd: resultsPath,
     };
 
-    try {
-      // Zip results
-      spawnSync(command, args, options);
-    } catch (err) {
-      throw err;
-    }
+    spawnSync(command, args, options);
   }
 };
 
