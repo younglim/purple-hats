@@ -82,7 +82,7 @@ export const init = async (
         checks: [
           {
             id: 'oobee-confusing-alt-text',
-            evaluate: function (node: HTMLElement) {
+            evaluate(node: HTMLElement) {
               const altText = node.getAttribute('alt');
               const confusingTexts = ['img', 'image', 'picture', 'photo', 'graphic'];
 
