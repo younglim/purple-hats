@@ -152,8 +152,8 @@ export const createScreenshotsFolder = randomToken => {
       if (!fs.existsSync(destinationPath(storagePath))) {
         try {
           fs.mkdirSync(destinationPath(storagePath), { recursive: true });
-        } catch (err) {
-          console.error('Screenshots folder was not created successfully:', err);
+        } catch (error) {
+          console.error('Screenshots folder was not created successfully:', error);
         }
       }
 
@@ -164,9 +164,9 @@ export const createScreenshotsFolder = randomToken => {
         );
       });
 
-      fs.rmdir(intermediateScreenshotsPath, err => {
-        if (err) {
-          console.log(err);
+      fs.rmdir(intermediateScreenshotsPath, rmdirErr => {
+        if (rmdirErr) {
+          console.log(rmdirErr);
         }
       });
     });
