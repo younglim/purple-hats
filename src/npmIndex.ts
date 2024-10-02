@@ -214,7 +214,7 @@ export const init = async (
     // goodToFixIssues = 0;
 
     if (isThresholdExceeded) {
-      terminate(); //terminate if threshold exceeded
+      terminate(); // terminate if threshold exceeded
       throw new Error(thresholdFailMessage);
     }
   };
