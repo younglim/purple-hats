@@ -139,7 +139,7 @@ export const getDefaultChromiumDataDir = () => {
 
 export const removeQuarantineFlag = function (searchPath: string) {
   if (os.platform() === 'darwin') {
-    let execPaths = globSync(searchPath, { absolute: true, nodir: true });
+    const execPaths = globSync(searchPath, { absolute: true, nodir: true });
     if (execPaths.length > 0) {
       execPaths.forEach(filePath => spawnSync('xattr', ['-d', 'com.apple.quarantine', filePath]));
     }
@@ -150,7 +150,7 @@ export const getExecutablePath = function (dir: string, file: string): string {
   let execPaths = globSync(`${dir}/${file}`, { absolute: true, nodir: true });
 
   if (execPaths.length === 0) {
-    let execInPATH = which.sync(file, { nothrow: true });
+    const execInPATH = which.sync(file, { nothrow: true });
 
     if (execInPATH) {
       return fs.realpathSync(execInPATH);
