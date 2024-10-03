@@ -316,6 +316,7 @@ export const isFollowStrategy = (link1, link2, rule) => {
   return parsedLink1.hostname === parsedLink2.hostname;
 };
 
+/* eslint-disable no-await-in-loop */
 export const retryFunction = async (func, maxAttempt) => {
   let attemptCount = 0;
   while (attemptCount < maxAttempt) {
@@ -328,3 +329,4 @@ export const retryFunction = async (func, maxAttempt) => {
     }
   }
 };
+/* eslint-enable no-await-in-loop */
