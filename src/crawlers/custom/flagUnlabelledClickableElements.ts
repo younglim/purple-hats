@@ -371,7 +371,6 @@ export const flagUnlabelledClickableElements = async (page: Page) => {
           );
           return false;
         }
-
         parents = parents.parentElement;
       }
 
@@ -815,8 +814,8 @@ export const flagUnlabelledClickableElements = async (page: Page) => {
       // Process main document
       const currentFlaggedElements: HTMLElement[] = [];
       let allElements = Array.from(document.querySelectorAll<HTMLElement>('*'));
-      let indexofAllElements:number = 0;
-      
+      let indexofAllElements: number = 0;
+
       while (indexofAllElements < allElements.length) {
         const element = allElements[indexofAllElements] as HTMLElement;
         // if it selects a frameset
@@ -830,10 +829,12 @@ export const flagUnlabelledClickableElements = async (page: Page) => {
 
         // If the element has a shadowRoot, add its children
         if (element.shadowRoot) {
-          allElements.push(...Array.from(element.shadowRoot.querySelectorAll("*")) as HTMLElement[]);
+          allElements.push(
+            ...(Array.from(element.shadowRoot.querySelectorAll('*')) as HTMLElement[]),
+          );
         }
         indexofAllElements++;
-      };
+      }
       currentFlaggedElementsByDocument[''] = currentFlaggedElements; // Key "" represents the main document
 
       // Process iframes
@@ -845,22 +846,24 @@ export const flagUnlabelledClickableElements = async (page: Page) => {
           if (iframeDocument) {
             const iframeFlaggedElements: HTMLElement[] = [];
             const iframeElements = Array.from(iframeDocument.querySelectorAll<HTMLElement>('*'));
-            let indexOfIframeElements:number = 0;
-            while(indexOfIframeElements < iframeElements.length){
+            let indexOfIframeElements: number = 0;
+            while (indexOfIframeElements < iframeElements.length) {
               const element = iframeElements[indexOfIframeElements] as HTMLElement;
               if (
-                  shouldFlagElement(element, allowNonClickableFlagging) ||
-                  element.dataset.flagged === 'true'
-                ) {
-                  element.dataset.flagged = 'true'; // Mark element as flagged
-                  iframeFlaggedElements.push(element);
-                }
+                shouldFlagElement(element, allowNonClickableFlagging) ||
+                element.dataset.flagged === 'true'
+              ) {
+                element.dataset.flagged = 'true'; // Mark element as flagged
+                iframeFlaggedElements.push(element);
+              }
               // If the element has a shadowRoot, add its children
               if (element.shadowRoot) {
-                iframeElements.push(...Array.from(element.shadowRoot.querySelectorAll("*")) as HTMLElement[]);
+                iframeElements.push(
+                  ...(Array.from(element.shadowRoot.querySelectorAll('*')) as HTMLElement[]),
+                );
               }
               indexOfIframeElements++;
-            };
+            }
             const iframeXPath = getXPath(iframe);
             currentFlaggedElementsByDocument[iframeXPath] = iframeFlaggedElements;
           }
@@ -879,22 +882,24 @@ export const flagUnlabelledClickableElements = async (page: Page) => {
           if (iframeDocument) {
             const iframeFlaggedElements: HTMLElement[] = [];
             const iframeElements = Array.from(iframeDocument.querySelectorAll<HTMLElement>('*'));
-            let indexOfIframeElements:number = 0;
-            while(indexOfIframeElements < iframeElements.length){
+            let indexOfIframeElements: number = 0;
+            while (indexOfIframeElements < iframeElements.length) {
               const element = iframeElements[indexOfIframeElements] as HTMLElement;
               if (
-                  shouldFlagElement(element, allowNonClickableFlagging) ||
-                  element.dataset.flagged === 'true'
-                ) {
-                  element.dataset.flagged = 'true'; // Mark element as flagged
-                  iframeFlaggedElements.push(element);
-                }
+                shouldFlagElement(element, allowNonClickableFlagging) ||
+                element.dataset.flagged === 'true'
+              ) {
+                element.dataset.flagged = 'true'; // Mark element as flagged
+                iframeFlaggedElements.push(element);
+              }
               // If the element has a shadowRoot, add its children
               if (element.shadowRoot) {
-                iframeElements.push(...Array.from(element.shadowRoot.querySelectorAll("*")) as HTMLElement[]);
+                iframeElements.push(
+                  ...(Array.from(element.shadowRoot.querySelectorAll('*')) as HTMLElement[]),
+                );
               }
               indexOfIframeElements++;
-            };
+            }
             const iframeXPath = getXPath(frame);
             currentFlaggedElementsByDocument[iframeXPath] = iframeFlaggedElements;
           }
@@ -917,7 +922,7 @@ export const flagUnlabelledClickableElements = async (page: Page) => {
               // For elements in iframes, adjust XPath
               xpath = docKey + xpath;
             }
-            if (xpath && flaggedElement!== null && flaggedElement.outerHTML) {
+            if (xpath && flaggedElement !== null && flaggedElement.outerHTML) {
               // console.log("flaggedElement Testing",flaggedElement.outerHTML);
               // console.log("xpath",xpath);
               const outerHTML = flaggedElement.outerHTML; // Get outerHTML
