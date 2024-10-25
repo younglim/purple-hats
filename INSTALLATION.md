@@ -1,29 +1,29 @@
-## Installation Guide
+# Installation Guide
 
-Oobee is provided as a portable distribution which minimises installation steps required for Windows and Mac.
+Oobee (formerly known as Purple A11y) is provided as a portable distribution which minimises installation steps required for Windows and Mac.
 
-### About Oobee
+## About Oobee
 
 Oobee is a customisable, automated accessibility testing tool that allows software development teams to find and fix accessibility problems to improve persons with disabilities (PWDs) access to digital services.
 
-### System Requirements
+## System Requirements
 
 - Oobee can run on MacOS Big Sur or above, and a [supported](https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client) version of Windows 10 (64-bit) or Windows 11.
 - Google Chrome browser is [installed](https://www.google.com/chrome).
 - One-time Internet access is needed to download and install Oobee Desktop.
 - You are recommended to be logged on to an admin user to run Oobee Desktop.
 
-### Windows
+## Windows
 
 <details>
   <summary>Click here for Windows setup instructions</summary>
 
-#### Download Portable Copy
+### Download Portable Copy
 
 - Download and extract latest [oobee-portable-windows.zip](https://github.com/GovTechSG/oobee/releases/latest/download/oobee-portable-windows.zip).
 - Tip: To extract files, right-click the Compressed zip file and click "Extract All…" in the context menu.
 
-#### Run Oobee
+### Run Oobee
 
 - Navigate to the folder containing oobee-portable-windows.
 - Double-click `oobee_shell.cmd` (Windows Command Script file).
@@ -79,17 +79,17 @@ PS C:\Users\username\Downloads\oobee-portable-windows\oobee> node index
 
   </details>
 
-### MacOS
+## MacOS
 
 <details>
   <summary>Click here for MacOS setup instructions</summary>
 
-#### Download Portable Copy
+### Download Portable Copy
 
 - Download and extract [oobee-portable-mac.zip](https://github.com/GovTechSG/oobee/releases/latest/download/oobee-portable-mac.zip) version.
 - Tip: To extract files in Mac, double-click on `oobee-portable-mac.zip` file, usually located at your Downloads folder. A new folder with the name `oobee-portable-mac` will appear in Finder.
 
-#### Run Oobee
+### Run Oobee
 
 - Navigate to the folder `oobee-portable-mac`, usually located at your Downloads folder.
 - Right-click `oobee_shell.command`. Then click `Open` in the context menu.
