@@ -1,35 +1,37 @@
-## Installation Guide
+# Installation Guide
 
-Oobee is provided as a portable distribution which minimises installation steps required for Windows and Mac.
+Oobee (CLI) is provided as a portable distribution which minimises installation steps required for Windows and Mac.
 
-### About Oobee
+## About Oobee (CLI)
 
 Oobee is a customisable, automated accessibility testing tool that allows software development teams to find and fix accessibility problems to improve persons with disabilities (PWDs) access to digital services.
 
-### System Requirements
+Oobee (CLI) allows software engineers to run Oobee as part of their software development environment as the command line, as well as [integrate it into their CI/CD pipleline](https://github.com/GovTechSG/oobee/blob/master/INTEGRATION.md).
 
-- Oobee can run on MacOS Big Sur or above, and a [supported](https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client) version of Windows 10 (64-bit) or Windows 11.
+## System Requirements
+
+- Oobee (CLI) can run on MacOS Big Sur or above, and a [supported](https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client) version of Windows 10 (64-bit) or Windows 11.
 - Google Chrome browser is [installed](https://www.google.com/chrome).
-- One-time Internet access is needed to download and install Oobee Desktop.
-- You are recommended to be logged on to an admin user to run Oobee Desktop.
+- One-time Internet access is needed to download and install Oobee (CLI).
+- You are recommended to be logged on to an admin user to run Oobee (CLI).
 
-### Windows
+## Windows
 
 <details>
   <summary>Click here for Windows setup instructions</summary>
 
-#### Download Portable Copy
+### Download Portable Copy
 
 - Download and extract latest [oobee-portable-windows.zip](https://github.com/GovTechSG/oobee/releases/latest/download/oobee-portable-windows.zip).
 - Tip: To extract files, right-click the Compressed zip file and click "Extract All…" in the context menu.
 
-#### Run Oobee
+### Run Oobee (CLI)
 
-- Navigate to the folder containing oobee-portable-windows.
-- Double-click `oobee_shell.cmd` (Windows Command Script file).
+- Navigate to the folder containing Oobee (CLI)-portable-windows.
+- Double-click `Oobee (CLI)_shell.cmd` (Windows Command Script file).
   <img width="480" alt="Screenshot of Windows Explorer with oobee_shell.cmd selected" src="https://github.com/GovTechSG/oobee/assets/50561219/872c9fce-0d7f-405d-b6b6-c8a196c3e81a">
 
-- A Windows Command Prompt window should open with contents as illustrated below. `oobee_shell` will automatically prepare your system to run Oobee.
+- A Windows Command Prompt window should open with contents as illustrated below. `oobee_shell` will automatically prepare your system to run Oobee (CLI).
 
 ```
 oobee Shell - Created By younglim - NO WARRANTY PROVIDED
@@ -79,17 +81,17 @@ PS C:\Users\username\Downloads\oobee-portable-windows\oobee> node index
 
   </details>
 
-### MacOS
+## MacOS
 
 <details>
   <summary>Click here for MacOS setup instructions</summary>
 
-#### Download Portable Copy
+### Download Portable Copy
 
 - Download and extract [oobee-portable-mac.zip](https://github.com/GovTechSG/oobee/releases/latest/download/oobee-portable-mac.zip) version.
 - Tip: To extract files in Mac, double-click on `oobee-portable-mac.zip` file, usually located at your Downloads folder. A new folder with the name `oobee-portable-mac` will appear in Finder.
 
-#### Run Oobee
+### Run Oobee (CLI)
 
 - Navigate to the folder `oobee-portable-mac`, usually located at your Downloads folder.
 - Right-click `oobee_shell.command`. Then click `Open` in the context menu.
@@ -98,7 +100,7 @@ PS C:\Users\username\Downloads\oobee-portable-windows\oobee> node index
 - A prompt as follows will appear like below. Click `Open`.
   <img width="240" alt="MacOS prompt for unidentified developer" src="https://github.com/GovTechSG/oobee/assets/152410523/85eb0d58-8dd9-477c-916a-b759cfb1afd6">
 
-- A Terminal window should open with contents as illustrated below. `oobee_shell` will automatically prepare your system to run Oobee.
+- A Terminal window should open with contents as illustrated below. `oobee_shell` will automatically prepare your system to run Oobee (CLI).
 
 ```
 Last login: Thu Mar 16 10:48:05 on ttys002
@@ -140,5 +142,5 @@ username@hostname oobee % node index
   custom flow
 ```
 
-- Follow the steps at [Features](https://github.com/GovTechSG/oobee#features) for more information on how to run a scan.
+- Follow the steps at [Features](https://github.com/GovTechSG/Oobee (CLI)#features) for more information on how to run a scan.
 </details>
