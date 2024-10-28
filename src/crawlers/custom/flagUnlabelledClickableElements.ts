@@ -371,6 +371,7 @@ export const flagUnlabelledClickableElements = async (page: Page) => {
           );
           return false;
         }
+
         parents = parents.parentElement;
       }
 
@@ -803,6 +804,9 @@ export const flagUnlabelledClickableElements = async (page: Page) => {
     }
 
     function flagElements() {
+      console.warn(
+        'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+      );
       console.time('Accessibility Check Time');
 
       const currentFlaggedElementsByDocument: Record<string, HTMLElement[]> = {}; // Temporary object to hold current flagged elements
@@ -957,6 +961,13 @@ export const flagUnlabelledClickableElements = async (page: Page) => {
       flaggedElements.forEach(flaggedElement => {
         flaggedElement.removeAttribute('data-flagged');
       });
+    }
+    function debounce(func, wait) {
+      let timeout;
+      return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
     }
 
     return flagElements();
