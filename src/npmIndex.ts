@@ -13,13 +13,13 @@ import {
 } from './constants/common.js';
 import { createCrawleeSubFolders, filterAxeResults } from './crawlers/commonCrawlerFunc.js';
 import { createAndUpdateResultsFolders, createDetailsAndLogs } from './utils.js';
-import { generateArtifacts } from './mergeAxeResults.js';
+import generateArtifacts from './mergeAxeResults.js';
 import { takeScreenshotForHTMLElements } from './screenshotFunc/htmlScreenshotFunc.js';
 import { silentLogger } from './logs.js';
 import { alertMessageOptions } from './constants/cliFunctions.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const filename = fileURLToPath(import.meta.url);
+const dirname = path.dirname(filename);
 
 export const init = async (
   entryUrl,
@@ -60,7 +60,6 @@ export const init = async (
   let goodToFixIssues = 0;
 
   let isInstanceTerminated = false;
-  let numPagesScanned = 0;
 
   const throwErrorIfTerminated = () => {
     if (isInstanceTerminated) {
@@ -71,7 +70,7 @@ export const init = async (
   const getScripts = () => {
     throwErrorIfTerminated();
     const axeScript = fs.readFileSync(
-      path.join(__dirname, '../node_modules/axe-core/axe.min.js'),
+      path.join(dirname, '../node_modules/axe-core/axe.min.js'),
       'utf-8',
     );
     async function runA11yScan(elementsToScan = []) {
@@ -83,7 +82,7 @@ export const init = async (
         checks: [
           {
             id: 'oobee-confusing-alt-text',
-            evaluate: function (node: HTMLElement) {
+            evaluate(node: HTMLElement) {
               const altText = node.getAttribute('alt');
               const confusingTexts = ['img', 'image', 'picture', 'photo', 'graphic'];
 
@@ -196,30 +195,6 @@ export const init = async (
     };
   };
 
-  const testThresholds = () => {
-    // check against thresholds to fail tests
-    let isThresholdExceeded = false;
-    let thresholdFailMessage = 'Exceeded thresholds:\n';
-    if (mustFixThreshold !== undefined && mustFixIssues > mustFixThreshold) {
-      isThresholdExceeded = true;
-      thresholdFailMessage += `mustFix occurrences found: ${mustFixIssues} > ${mustFixThreshold}\n`;
-    }
-
-    if (goodToFixThreshold !== undefined && goodToFixIssues > goodToFixThreshold) {
-      isThresholdExceeded = true;
-      thresholdFailMessage += `goodToFix occurrences found: ${goodToFixIssues} > ${goodToFixThreshold}\n`;
-    }
-
-    // uncomment to reset counts if you do not want violations count to be cumulative across other pages
-    // mustFixIssues = 0;
-    // goodToFixIssues = 0;
-
-    if (isThresholdExceeded) {
-      terminate(); //terminate if threshold exceeded
-      throw new Error(thresholdFailMessage);
-    }
-  };
-
   const terminate = async () => {
     throwErrorIfTerminated();
     console.log('Stopping Oobee');
@@ -236,7 +211,7 @@ export const init = async (
         ...scanDetails.urlsCrawled.error,
         ...scanDetails.urlsCrawled.invalid,
       ];
-      scanAboutMetadata = {
+      const updatedScanAboutMetadata = {
         viewport: `${viewportSettings.width} x ${viewportSettings.height}`,
         ...scanAboutMetadata,
       };
@@ -244,11 +219,11 @@ export const init = async (
         randomToken,
         scanDetails.requestUrl,
         scanDetails.crawlType,
-        scanAboutMetadata.viewport,
+        updatedScanAboutMetadata.viewport,
         scanDetails.urlsCrawled.scanned,
         pagesNotScanned,
         testLabel,
-        scanAboutMetadata,
+        updatedScanAboutMetadata,
         scanDetails,
         zip,
       );
@@ -270,6 +245,30 @@ export const init = async (
     }
 
     return randomToken;
+  };
+
+  const testThresholds = () => {
+    // check against thresholds to fail tests
+    let isThresholdExceeded = false;
+    let thresholdFailMessage = 'Exceeded thresholds:\n';
+    if (mustFixThreshold !== undefined && mustFixIssues > mustFixThreshold) {
+      isThresholdExceeded = true;
+      thresholdFailMessage += `mustFix occurrences found: ${mustFixIssues} > ${mustFixThreshold}\n`;
+    }
+
+    if (goodToFixThreshold !== undefined && goodToFixIssues > goodToFixThreshold) {
+      isThresholdExceeded = true;
+      thresholdFailMessage += `goodToFix occurrences found: ${goodToFixIssues} > ${goodToFixThreshold}\n`;
+    }
+
+    // uncomment to reset counts if you do not want violations count to be cumulative across other pages
+    // mustFixIssues = 0;
+    // goodToFixIssues = 0;
+
+    if (isThresholdExceeded) {
+      terminate(); // terminate if threshold exceeded
+      throw new Error(thresholdFailMessage);
+    }
   };
 
   return {

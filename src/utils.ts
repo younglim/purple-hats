@@ -1,17 +1,17 @@
 import { execSync, spawnSync } from 'child_process';
 import path from 'path';
 import os from 'os';
-import {
+import fs from 'fs-extra';
+import constants, {
   BrowserTypes,
   destinationPath,
   getIntermediateScreenshotsPath,
 } from './constants/constants.js';
-import fs from 'fs-extra';
-import constants from './constants/constants.js';
 import { silentLogger } from './logs.js';
 
 export const getVersion = () => {
-  const loadJSON = path => JSON.parse(fs.readFileSync(new URL(path, import.meta.url)).toString());
+  const loadJSON = filePath =>
+    JSON.parse(fs.readFileSync(new URL(filePath, import.meta.url)).toString());
   const versionNum = loadJSON('../package.json').version;
 
   return versionNum;
@@ -35,12 +35,11 @@ export const getStoragePath = (randomToken: string): string => {
   }
   if (constants.exportDirectory === process.cwd()) {
     return `results/${randomToken}`;
-  } else {
-    if (!path.isAbsolute(constants.exportDirectory)) {
-      constants.exportDirectory = path.resolve(process.cwd(), constants.exportDirectory);
-    }
-    return `${constants.exportDirectory}/${randomToken}`;
   }
+  if (!path.isAbsolute(constants.exportDirectory)) {
+    constants.exportDirectory = path.resolve(process.cwd(), constants.exportDirectory);
+  }
+  return `${constants.exportDirectory}/${randomToken}`;
 };
 
 export const createDetailsAndLogs = async randomToken => {
@@ -78,12 +77,12 @@ export const getUserDataFilePath = () => {
   const platform = os.platform();
   if (platform === 'win32') {
     return path.join(process.env.APPDATA, 'Oobee', 'userData.txt');
-  } else if (platform === 'darwin') {
-    return path.join(process.env.HOME, 'Library', 'Application Support', 'Oobee', 'userData.txt');
-  } else {
-    // linux and other OS
-    return path.join(process.env.HOME, '.config', 'oobee', 'userData.txt');
   }
+  if (platform === 'darwin') {
+    return path.join(process.env.HOME, 'Library', 'Application Support', 'Oobee', 'userData.txt');
+  }
+  // linux and other OS
+  return path.join(process.env.HOME, '.config', 'oobee', 'userData.txt');
 };
 
 export const getUserDataTxt = () => {
@@ -148,14 +147,14 @@ export const createScreenshotsFolder = randomToken => {
   if (fs.existsSync(intermediateScreenshotsPath)) {
     fs.readdir(intermediateScreenshotsPath, (err, files) => {
       if (err) {
-        console.log('Screenshots were not moved successfully: ' + err.message);
+        console.log(`Screenshots were not moved successfully: ${err.message}`);
       }
 
       if (!fs.existsSync(destinationPath(storagePath))) {
         try {
           fs.mkdirSync(destinationPath(storagePath), { recursive: true });
-        } catch (err) {
-          console.error('Screenshots folder was not created successfully:', err);
+        } catch (error) {
+          console.error('Screenshots folder was not created successfully:', error);
         }
       }
 
@@ -166,9 +165,9 @@ export const createScreenshotsFolder = randomToken => {
         );
       });
 
-      fs.rmdir(intermediateScreenshotsPath, err => {
-        if (err) {
-          console.log(err);
+      fs.rmdir(intermediateScreenshotsPath, rmdirErr => {
+        if (rmdirErr) {
+          console.log(rmdirErr);
         }
       });
     });
@@ -191,7 +190,7 @@ export const cleanUp = async pathToDelete => {
 //     timeZoneName: "longGeneric",
 //   });
 
-export const getWcagPassPercentage = (wcagViolations: any[]): string => {
+export const getWcagPassPercentage = (wcagViolations: string[]): string => {
   const totalChecks = Object.keys(constants.wcagLinks).length;
   const passedChecks = totalChecks - wcagViolations.length;
   const passPercentage = (passedChecks / totalChecks) * 100;
@@ -209,26 +208,25 @@ export const getFormattedTime = inputDate => {
       hour: 'numeric',
       minute: '2-digit',
     });
-  } else {
-    return new Date().toLocaleTimeString('en-GB', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour12: false,
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZoneName: 'longGeneric',
-    });
   }
+  return new Date().toLocaleTimeString('en-GB', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour12: false,
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'longGeneric',
+  });
 };
 
 export const formatDateTimeForMassScanner = date => {
   // Format date and time parts separately
   const year = date.getFullYear().toString().slice(-2); // Get the last two digits of the year
-  const month = ('0' + (date.getMonth() + 1)).slice(-2); // Month is zero-indexed
-  const day = ('0' + date.getDate()).slice(-2);
-  const hour = ('0' + date.getHours()).slice(-2);
-  const minute = ('0' + date.getMinutes()).slice(-2);
+  const month = `0${date.getMonth() + 1}`.slice(-2); // Month is zero-indexed
+  const day = `0${date.getDate()}`.slice(-2);
+  const hour = `0${date.getHours()}`.slice(-2);
+  const minute = `0${date.getMinutes()}`.slice(-2);
 
   // Combine formatted date and time with a slash
   const formattedDateTime = `${day}/${month}/${year} ${hour}:${minute}`;
@@ -256,14 +254,10 @@ export const zipResults = (zipName, resultsPath) => {
   }
 
   if (os.platform() === 'win32') {
-    try {
-      execSync(
-        `Get-ChildItem -Path "${resultsPath}\\*.*" -Recurse | Compress-Archive -DestinationPath "${zipName}"`,
-        { shell: 'powershell.exe' },
-      );
-    } catch (err) {
-      throw err;
-    }
+    execSync(
+      `Get-ChildItem -Path "${resultsPath}\\*.*" -Recurse | Compress-Archive -DestinationPath "${zipName}"`,
+      { shell: 'powershell.exe' },
+    );
   } else {
     // Get zip command in Mac and Linux
     const command = '/usr/bin/zip';
@@ -278,12 +272,7 @@ export const zipResults = (zipName, resultsPath) => {
       cwd: resultsPath,
     };
 
-    try {
-      // Zip results
-      spawnSync(command, args, options);
-    } catch (err) {
-      throw err;
-    }
+    spawnSync(command, args, options);
   }
 };
 
@@ -301,7 +290,7 @@ export const areLinksEqual = (link1, link2) => {
     const arePathEqual = l1.pathname === l2.pathname;
 
     return areHostEqual && arePathEqual;
-  } catch (error) {
+  } catch {
     return link1 === link2;
   }
 };
@@ -323,15 +312,15 @@ export const isFollowStrategy = (link1, link2, rule) => {
     const link1Domain = parsedLink1.hostname.split('.').slice(-2).join('.');
     const link2Domain = parsedLink2.hostname.split('.').slice(-2).join('.');
     return link1Domain === link2Domain;
-  } else {
-    return parsedLink1.hostname === parsedLink2.hostname;
   }
+  return parsedLink1.hostname === parsedLink2.hostname;
 };
 
+/* eslint-disable no-await-in-loop */
 export const retryFunction = async (func, maxAttempt) => {
   let attemptCount = 0;
   while (attemptCount < maxAttempt) {
-    attemptCount++;
+    attemptCount += 1;
     try {
       const result = await func();
       return result;
@@ -340,3 +329,4 @@ export const retryFunction = async (func, maxAttempt) => {
     }
   }
 };
+/* eslint-enable no-await-in-loop */
