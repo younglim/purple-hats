@@ -291,7 +291,25 @@ export const runAxeScript = async ({
 
   const enableWcagAaa = ruleset.includes(RuleFlags.ENABLE_WCAG_AAA);
 
-  await flagUnlabelledClickableElements(page);
+  const xpathToCssSelector = (xpath: string) => {
+    return xpath.replaceAll('/', ' ');
+  };
+  console.log(
+    'BEFORE ----------------------------------------------------------------------------------------',
+  );
+  const oobeeAccessibleLabelFlaggedXpaths = (await flagUnlabelledClickableElements(page))
+    .map(item => item.xpath)
+    .map(xpathToCssSelector)
+    .join(', ');
+  console.log(
+    'AFTER ----------------------------------------------------------------------------------------',
+  );
+  console.log(
+    '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=',
+    oobeeAccessibleLabelFlaggedXpaths,
+  );
+
+  // const oobeeAccessibleLabelFlaggedXpaths = 'html body div div, img';
 
   await crawlee.playwrightUtils.injectFile(page, axeScript);
 
