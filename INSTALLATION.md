@@ -53,7 +53,7 @@ PS C:\Users\username\Downloads\oobee-portable-windows>
 
 ```
 cd oobee
-node index
+npm start
 ```
 
 - If a Windows Firewall prompt appears, if you have administrator rights, click "Allow" or "Allow access". Click "Cancel" if you do not have administrator rights.
@@ -64,7 +64,7 @@ node index
 
 ```
 PS C:\Users\username\Downloads\oobee-portable-windows> cd oobee
-PS C:\Users\username\Downloads\oobee-portable-windows\oobee> node index
+PS C:\Users\username\Downloads\oobee-portable-windows\oobee> npm start
 ┌────────────────────────────────────────────────────────────┐
 │ Welcome to A11y Accessibility Testing Tool!                │
 │ We recommend using Chrome browser for the best experience. │
@@ -122,14 +122,14 @@ username@hostname oobee-portable-mac %
 
 ```
 cd oobee
-node index
+npm start
 ```
 
 - You should then see your Terminal window updated with the following contents
 
 ```
 username@hostname oobee-portable-mac % cd oobee
-username@hostname oobee % node index
+username@hostname oobee % npm start
 ┌────────────────────────────────────────────────────────────┐
 │ Welcome to A11y Accessibility Testing Tool!                │
 │ We recommend using Chrome browser for the best experience. │
