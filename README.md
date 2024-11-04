@@ -1,8 +1,10 @@
-# Oobee
+# Oobee (CLI)
 
 [Oobee](https://go.gov.sg/oobee-cli) (formerly known as Purple A11y) is a customisable, automated accessibility testing tool that allows software development teams to assess whether their products are user-friendly to persons with disabilities (PWDs).
 
-This is the engine and command-line interface (CLI) for Oobee. For a desktop graphical user interface (GUI), check out [Oobee Desktop](https://go.gov.sg/oobee). The official application can only be downloaded at [https://go.gov.sg/oobee-cicd](https://go.gov.sg/oobee-cicd). We recommend that you download the software only from the official link, as other sources and/or third party links may pose risks and/or compromise your system.
+This is the engine and command-line interface (CLI) for Oobee. The official application can only be downloaded at [https://go.gov.sg/oobee-cli](https://go.gov.sg/oobee-cli). We recommend that you download the software only from the official link, as other sources and/or third party links may pose risks and/or compromise your system.
+
+For the **user-friendly desktop application**, check out [Oobee](https://go.gov.sg/oobee).
 
 ## Technology Stack
 
@@ -578,4 +580,4 @@ We recommend looking at our **Technology Stack** to understand the usage of each
 
 Oobee uses third-party open-source tools that may be downloaded over the Internet during the installation process of Oobee. Users should be aware of the libraries used by examining `package.json`.
 
-Oobee may send information to the website, URL and HTML code snippets where the user chooses to initiate a Oobee scan for telemetry purposes.
+Oobee may send information to the website or URL where the user chooses to initiate a Oobee scan. Limited user information such as e-mail address, name, and basic analytics is collected for the purpose of knowing our usage patterns better.
