@@ -292,6 +292,11 @@ export const runAxeScript = async ({
 
   const enableWcagAaa = ruleset.includes(RuleFlags.ENABLE_WCAG_AAA);
 
+  const oobeeAccessibleLabelFlaggedCssSelectors = (await flagUnlabelledClickableElements(page))
+    .map(item => item.xpath)
+    .map(xPathToCss)
+    .join(', ');
+
   // Call extractAndGradeText to get readability score and flag for difficult-to-read text
   const flag = await extractAndGradeText(page);
 
@@ -512,7 +517,7 @@ export const failedRequestHandler = async ({ request }) => {
   crawlee.log.error(`Failed Request - ${request.url}: ${request.errorMessages}`);
 };
 
-export const isUrlPdf = url => {
+export const isUrlPdf = (url: string) => {
   if (isFilePath(url)) {
     return /\.pdf$/i.test(url);
   }
