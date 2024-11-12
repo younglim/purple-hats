@@ -13,6 +13,7 @@ import { takeScreenshotForHTMLElements } from '../screenshotFunc/htmlScreenshotF
 import { isFilePath } from '../constants/common.js';
 import { customAxeConfig } from './customAxeFunctions.js';
 import { flagUnlabelledClickableElements } from './custom/flagUnlabelledClickableElements.js';
+import { extractAndGradeText } from './custom/extractAndGradeText.js';
 import { ItemsInfo } from '../mergeAxeResults.js';
 
 // types
@@ -291,10 +292,14 @@ export const runAxeScript = async ({
 
   const enableWcagAaa = ruleset.includes(RuleFlags.ENABLE_WCAG_AAA);
 
-  const oobeeAccessibleLabelFlaggedCssSelectors = (await flagUnlabelledClickableElements(page))
-    .map(item => item.xpath)
-    .map(xPathToCss)
-    .join(', ');
+  // Call extractAndGradeText to get readability score and flag for difficult-to-read text
+  const flag = await extractAndGradeText(page);
+
+  if (!flag) {
+    console.warn('Flag was not set as expected in extractAndGradeText.');
+  } else {
+    console.warn('Flag was set as expected in extractAndGradeText.');
+  }
 
   await crawlee.playwrightUtils.injectFile(page, axeScript);
 
@@ -306,6 +311,7 @@ export const runAxeScript = async ({
       disableOobee,
       enableWcagAaa,
       oobeeAccessibleLabelFlaggedCssSelectors,
+      flag,
     }) => {
       try {
         const evaluateAltText = (node: Element) => {
@@ -463,6 +469,7 @@ export const runAxeScript = async ({
       disableOobee,
       enableWcagAaa,
       oobeeAccessibleLabelFlaggedCssSelectors,
+      flag,
     },
   );
 
@@ -505,7 +512,7 @@ export const failedRequestHandler = async ({ request }) => {
   crawlee.log.error(`Failed Request - ${request.url}: ${request.errorMessages}`);
 };
 
-export const isUrlPdf = (url: string) => {
+export const isUrlPdf = url => {
   if (isFilePath(url)) {
     return /\.pdf$/i.test(url);
   }
