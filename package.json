@@ -6,7 +6,7 @@
   "dependencies": {
     "@json2csv/node": "^7.0.3",
     "@napi-rs/canvas": "^0.1.53",
-    "axe-core": "^4.9.1",
+    "axe-core": "^4.10.2",
     "axios": "^1.7.4",
     "cheerio": "^1.0.0-rc.12",
     "crawlee": "^3.11.1",
