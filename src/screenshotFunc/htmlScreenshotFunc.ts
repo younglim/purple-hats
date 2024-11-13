@@ -26,6 +26,15 @@ export const takeScreenshotForHTMLElements = async (
       newViolations.push(violation);
       continue;
     }
+
+    const { id: rule } = violation;
+
+    // Check if rule ID is 'oobee-grading-text-contents' and skip screenshot logic
+    if (rule === 'oobee-grading-text-contents') {
+      newViolations.push(violation);
+      continue;
+    }
+
     const newViolationNodes: NodeResultWithScreenshot[] = [];
     for (const node of violation.nodes) {
       const nodeWithScreenshotPath: NodeResultWithScreenshot = node;
