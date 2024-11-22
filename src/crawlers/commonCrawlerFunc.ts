@@ -84,6 +84,7 @@ export const filterAxeResults = (
     if (rule === 'frame-tested') return;
 
     const conformance = tags.filter(tag => tag.startsWith('wcag') || tag === 'best-practice');
+
     // handle rare cases where conformance level is not the first element
     const levels = ['wcag2a', 'wcag2aa', 'wcag2aaa'];
     if (conformance[0] !== 'best-practice' && !levels.includes(conformance[0])) {
@@ -102,6 +103,7 @@ export const filterAxeResults = (
     const addTo = (category: ResultCategory, node: NodeResultWithScreenshot) => {
       const { html, failureSummary, screenshotPath, target, impact: axeImpact } = node;
       if (!(rule in category.rules)) {
+        // console.log(`Adding new rule to category: ${category}`);
         category.rules[rule] = {
           description,
           axeImpact,
@@ -137,6 +139,8 @@ export const filterAxeResults = (
 
     nodes.forEach(node => {
       const { impact } = node;
+      // Log impact and decision
+      // console.log('Node impact:', { impact, displayNeedsReview });
       if (displayNeedsReview) {
         addTo(needsReview, node);
       } else if (impact === 'critical' || impact === 'serious') {
@@ -146,6 +150,14 @@ export const filterAxeResults = (
       }
     });
   };
+
+  // Log the final results after processing all items
+  // console.log('Final categories:', {
+  //   mustFix,
+  //   goodToFix,
+  //   needsReview,
+  //   passed,
+  // });
 
   violations.forEach(item => process(item, false));
   incomplete.forEach(item => process(item, true));
@@ -359,6 +371,26 @@ export const runAxeScript = async ({
               ...customAxeConfig.checks[1],
               evaluate: (node: Element) => {
                 return !node.dataset.flagged; // fail any element with a data-flagged attribute set to true
+              },
+            },
+            {
+              ...customAxeConfig.checks[2],
+              evaluate: (_node: HTMLElement) => {
+                // console.log('Evaluate function triggered');
+                // if (flag === true) {
+                //   console.warn('Readability issues detected passed');
+                //   return true; // nothing flagged, so pass everything
+                // }
+                // console.warn('Readability issues detected failed');
+                // return false; // fail all elements that match the selector
+                // console.log('Flag in evaluate:', flag);
+                // return flag ? true : false; // Fail if flag is true, pass if false
+                if (flag === '') {
+                  console.log('none');
+                  return true; // nothing flagged, so pass everything
+                }
+                console.log('have');
+                return false;
               },
             },
           ],
