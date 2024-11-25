@@ -140,12 +140,13 @@ export const filterAxeResults = (
     nodes.forEach(node => {
       const { impact } = node;
       // Log impact and decision
-      // console.log('Node impact:', { impact, displayNeedsReview });
+      console.log('Node impact:', { impact, displayNeedsReview });
       if (displayNeedsReview) {
         addTo(needsReview, node);
       } else if (impact === 'critical' || impact === 'serious') {
         addTo(mustFix, node);
       } else {
+        console.log(node);
         addTo(goodToFix, node);
       }
     });
@@ -366,6 +367,27 @@ export const runAxeScript = async ({
             {
               ...customAxeConfig.checks[0],
               evaluate: evaluateAltText,
+            },
+            {
+              ...customAxeConfig.checks[1],
+              evaluate: (_node: HTMLElement) => {
+                if (oobeeAccessibleLabelFlaggedCssSelectors === '') {
+                  return true; // nothing flagged, so pass everything
+                }
+                return false; // fail all elements that match the selector
+              },
+            },
+            {
+              ...customAxeConfig.checks[2],
+              evaluate: (_node: HTMLElement) => {
+                console.log('Readability flag check triggered');
+                if (flag === '') {
+                  console.log('No readability issues detected');
+                  return true; // Pass if no readability issues
+                }
+                console.log('Readability issues detected');
+                return false; // Fail if readability issues are detected
+              },
             },
             {
               ...customAxeConfig.checks[1],
