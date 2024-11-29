@@ -519,17 +519,6 @@ export const runAxeScript = async ({
     },
   );
 
-  console.log(results);
-
-  // Adjust results to classify `oobee-grading-text-contents` under "incomplete"
-  results.violations = results.violations.filter((violation) => {
-    if (violation.id === 'oobee-grading-text-contents') {
-      results.incomplete.push(violation); // Move to "incomplete"
-      return false; // Remove from "violations"
-    }
-    return true;
-  });
-
   if (includeScreenshots) {
     //console.log('Before screenshot processing:', results.violations);
     results.violations = await takeScreenshotForHTMLElements(results.violations, page, randomToken);
