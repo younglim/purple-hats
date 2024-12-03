@@ -520,7 +520,7 @@ export const runAxeScript = async ({
   );
 
   if (includeScreenshots) {
-    //console.log('Before screenshot processing:', results.violations);
+    // console.log('Before screenshot processing:', results.violations);
     results.violations = await takeScreenshotForHTMLElements(results.violations, page, randomToken);
     results.incomplete = await takeScreenshotForHTMLElements(results.incomplete, page, randomToken);
   }
