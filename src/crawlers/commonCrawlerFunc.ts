@@ -347,7 +347,7 @@ export const runAxeScript = async ({
             },
             {
               ...customAxeConfig.checks[1],
-              evaluate: (node: Element) => {
+              evaluate: (node: HTMLElement) => {
                 return !node.dataset.flagged; // fail any element with a data-flagged attribute set to true
               },
             },
@@ -448,19 +448,19 @@ export const runAxeScript = async ({
               if (!element) {
                 const shadowRoots = [];
                 const allElements = document.querySelectorAll('*');
-                
+
                 // Look for elements with shadow roots
                 allElements.forEach(el => {
                   if (el.shadowRoot) {
                     shadowRoots.push(el.shadowRoot);
                   }
                 });
-          
+
                 // Search inside each shadow root for the element
                 for (const shadowRoot of shadowRoots) {
                   const shadowElement = shadowRoot.querySelector(cssSelector);
                   if (shadowElement) {
-                    element = shadowElement;  // Found the element inside shadow DOM
+                    element = shadowElement; // Found the element inside shadow DOM
                     break;
                   }
                 }
