@@ -294,7 +294,6 @@ export const runAxeScript = async ({
   const enableWcagAaa = ruleset.includes(RuleFlags.ENABLE_WCAG_AAA);
 
   const gradingReadabilityFlag = await extractAndGradeText(page); // Ensure flag is obtained before proceeding
-  console.log(gradingReadabilityFlag);
 
   await crawlee.playwrightUtils.injectFile(page, axeScript);
 
@@ -354,12 +353,9 @@ export const runAxeScript = async ({
             {
               ...customAxeConfig.checks[2],
               evaluate: (_node: HTMLElement) => {
-                console.log('Readability flag check triggered');
                 if (gradingReadabilityFlag === '') {
-                  console.log('No readability issues detected');
                   return true; // Pass if no readability issues
                 }
-                console.log('Readability issues detected');
                 // Dynamically update the grading messages
                 const gradingCheck = customAxeConfig.checks.find(
                   check => check.id === 'oobee-grading-text-contents',
@@ -491,12 +487,9 @@ export const runAxeScript = async ({
   );
 
   if (includeScreenshots) {
-    // console.log('Before screenshot processing:', results.violations);
     results.violations = await takeScreenshotForHTMLElements(results.violations, page, randomToken);
     results.incomplete = await takeScreenshotForHTMLElements(results.incomplete, page, randomToken);
   }
-
-  console.log(results);
 
   const pageTitle = await page.evaluate(() => document.title);
 

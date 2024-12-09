@@ -29,7 +29,7 @@ export async function extractAndGradeText(page: Page): Promise<string> {
 
     // Check if any valid sentences were extracted
     if (sentences.length === 0) {
-      return ""; // Return an empty string if no valid sentences are found
+      return ''; // Return an empty string if no valid sentences are found
     }
 
     // Join the valid sentences into a single string
@@ -42,19 +42,16 @@ export async function extractAndGradeText(page: Page): Promise<string> {
     const readabilityScore = wordCount >= 20 ? textReadability.fleschReadingEase(filteredText) : 0;
 
     // Log details for debugging
-    console.log('Readability Score:', readabilityScore);
-    console.log('Word Count:', wordCount);
 
     // Determine the return value
-    const result = readabilityScore === 0 || readabilityScore > 50 ? "" : readabilityScore.toString(); // Convert readabilityScore to string
+    const result =
+      readabilityScore === 0 || readabilityScore > 50 ? '' : readabilityScore.toString(); // Convert readabilityScore to string
 
     const pageUrl = await page.url(); // Get the page URL
-    console.log('Page URL:', pageUrl);
-    console.log('Result:', result);
 
     return result;
   } catch (error) {
     console.error('Error extracting and grading text:', error);
-    return ""; // Return an empty string in case of an error
+    return ''; // Return an empty string in case of an error
   }
 }
