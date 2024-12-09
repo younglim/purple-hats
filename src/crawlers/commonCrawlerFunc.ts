@@ -477,7 +477,7 @@ export const runAxeScript = async ({
               help: 'Clickable elements (i.e. elements with mouse-click interaction) must have accessible labels.',
               helpUrl: 'https://www.deque.com/blog/accessible-aria-buttons',
               nodes: escapedCssSelectors.map(cssSelector => ({
-                html: document.querySelector(cssSelector).outerHTML,
+                html: findElementByCssSelector(cssSelector),
                 target: [cssSelector],
                 impact: 'serious' as ImpactValue,
                 failureSummary:
