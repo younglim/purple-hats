@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { chromium } from 'playwright';
 import { createWriteStream } from 'fs';
 import { AsyncParser, ParserOptions } from '@json2csv/node';
+import { v4 as uuidv4 } from 'uuid';
 import constants, { ScannerTypes } from './constants/constants.js';
 import { urlWithoutAuth } from './constants/common.js';
 import {
@@ -16,13 +17,14 @@ import {
   getStoragePath,
   getVersion,
   getWcagPassPercentage,
-  formatDateTimeForMassScanner,
   retryFunction,
   zipResults,
 } from './utils.js';
 import { consoleLogger, silentLogger } from './logs.js';
 import itemTypeDescription from './constants/itemTypeDescription.js';
 import { oobeeAiHtmlETL, oobeeAiRules } from './constants/oobeeAi.js';
+
+const cwd = process.cwd();
 
 export type ItemsInfo = {
   html: string;
@@ -197,13 +199,194 @@ const writeCsv = async (allIssues, storagePath) => {
   parser.parse(allIssues).pipe(csvOutput);
 };
 
-const writeHTML = async (allIssues, storagePath, htmlFilename = 'report') => {
+const compileHtmlWithEJS = async (allIssues, storagePath, htmlFilename = 'report') => {
+  const htmlFilePath = `${path.join(storagePath, htmlFilename)}.html`;
   const ejsString = fs.readFileSync(path.join(dirname, './static/ejs/report.ejs'), 'utf-8');
   const template = ejs.compile(ejsString, {
     filename: path.join(dirname, './static/ejs/report.ejs'),
   });
   const html = template(allIssues);
-  fs.writeFileSync(`${storagePath}/${htmlFilename}.html`, html);
+  await fs.writeFile(htmlFilePath, html);
+
+  let htmlContent = await fs.readFile(htmlFilePath, { encoding: 'utf8' });
+
+  const headIndex = htmlContent.indexOf('</head>');
+  const injectScript = `
+  <script>
+    try {
+      const base64DecodeChunkedWithDecoder = (data, chunkSize = 1024 * 1024) => {
+      const encodedChunks = data.split('.');
+      const decoder = new TextDecoder();
+      const jsonParts = [];
+
+      encodedChunks.forEach(chunk => {
+          for (let i = 0; i < chunk.length; i += chunkSize) {
+              const chunkPart = chunk.slice(i, i + chunkSize);
+              const decodedBytes = Uint8Array.from(atob(chunkPart), c => c.charCodeAt(0));
+              jsonParts.push(decoder.decode(decodedBytes, { stream: true }));
+          }
+      });
+
+      return JSON.parse(jsonParts.join(''));
+
+    };
+
+    // IMPORTANT! DO NOT REMOVE ME: Decode the encoded data
+    } catch (error) {
+      console.error("Error decoding base64 data:", error);
+    }
+  </script>
+  `;
+
+  if (headIndex !== -1) {
+    htmlContent = htmlContent.slice(0, headIndex) + injectScript + htmlContent.slice(headIndex);
+  } else {
+    htmlContent += injectScript;
+  }
+
+  await fs.writeFile(htmlFilePath, htmlContent);
+
+  return htmlFilePath;
+};
+
+const splitHtmlAndCreateFiles = async (htmlFilePath, storagePath) => {
+  try {
+    const htmlContent = await fs.readFile(htmlFilePath, { encoding: 'utf8' });
+    const splitMarker = '// IMPORTANT! DO NOT REMOVE ME: Decode the encoded data';
+    const splitIndex = htmlContent.indexOf(splitMarker);
+
+    if (splitIndex === -1) {
+      throw new Error('Marker comment not found in the HTML file.');
+    }
+
+    const topContent = htmlContent.slice(0, splitIndex + splitMarker.length) + '\n\n';
+    const bottomContent = htmlContent.slice(splitIndex + splitMarker.length);
+
+    const topFilePath = path.join(storagePath, 'report-partial-top.htm.txt');
+    const bottomFilePath = path.join(storagePath, 'report-partial-bottom.htm.txt');
+
+    await fs.writeFile(topFilePath, topContent, { encoding: 'utf8' });
+    await fs.writeFile(bottomFilePath, bottomContent, { encoding: 'utf8' });
+
+    await fs.unlink(htmlFilePath);
+
+    return { topFilePath, bottomFilePath };
+  } catch (error) {
+    console.error('Error splitting HTML and creating files:', error);
+  }
+};
+
+const writeHTML = async (allIssues, storagePath, htmlFilename = 'report') => {
+  const htmlFilePath = await compileHtmlWithEJS(allIssues, storagePath, htmlFilename);
+  const inputFilePath = path.resolve(storagePath, 'scanDetails.csv');
+  const outputFilePath = `${storagePath}/${htmlFilename}.html`;
+
+  const { topFilePath, bottomFilePath } = await splitHtmlAndCreateFiles(htmlFilePath, storagePath);
+
+  const prefixData = fs.readFileSync(path.join(storagePath, 'report-partial-top.htm.txt'), 'utf-8');
+  const suffixData = fs.readFileSync(
+    path.join(storagePath, 'report-partial-bottom.htm.txt'),
+    'utf-8',
+  );
+
+  const outputStream = fs.createWriteStream(outputFilePath, { flags: 'a' });
+
+  outputStream.write(prefixData);
+
+  // Create a readable stream for the input file with a highWaterMark set to 10MB
+  const BUFFER_LIMIT = 10 * 1024 * 1024; // 10 MB
+  const inputStream = fs.createReadStream(inputFilePath, {
+    encoding: 'utf-8',
+    highWaterMark: BUFFER_LIMIT,
+  });
+
+  let isFirstLine = true;
+  let lineEndingDetected = false;
+  let isFirstField = true;
+  let isWritingFirstDataLine = true;
+  let buffer = '';
+
+  function flushBuffer() {
+    if (buffer.length > 0) {
+      outputStream.write(buffer);
+      buffer = '';
+    }
+  }
+
+  const cleanupFiles = async () => {
+    try {
+      await Promise.all([fs.promises.unlink(topFilePath), fs.promises.unlink(bottomFilePath)]);
+    } catch (err) {
+      console.error('Error cleaning up temporary files:', err);
+    }
+  };
+
+  inputStream.on('data', chunk => {
+    let chunkIndex = 0;
+
+    while (chunkIndex < chunk.length) {
+      const char = chunk[chunkIndex];
+
+      if (isFirstLine) {
+        if (char === '\n' || char === '\r') {
+          lineEndingDetected = true;
+        } else if (lineEndingDetected) {
+          if (char !== '\n' && char !== '\r') {
+            isFirstLine = false;
+
+            if (isWritingFirstDataLine) {
+              buffer += "scanData = base64DecodeChunkedWithDecoder('";
+              isWritingFirstDataLine = false;
+            }
+            buffer += char;
+          }
+          lineEndingDetected = false;
+        }
+      } else {
+        if (char === ',') {
+          buffer += "')\n\n";
+          buffer += "scanItems = base64DecodeChunkedWithDecoder('";
+          isFirstField = false;
+        } else if (char === '\n' || char === '\r') {
+          if (!isFirstField) {
+            buffer += "')\n";
+          }
+        } else {
+          buffer += char;
+        }
+
+        if (buffer.length >= BUFFER_LIMIT) {
+          flushBuffer();
+        }
+      }
+
+      chunkIndex++;
+    }
+  });
+
+  inputStream.on('end', async () => {
+    if (!isFirstField) {
+      buffer += "')\n";
+    }
+    flushBuffer();
+
+    outputStream.write(suffixData);
+    outputStream.end();
+    console.log('Content appended successfully.');
+
+    await cleanupFiles();
+  });
+
+  inputStream.on('error', async err => {
+    console.error('Error reading input file:', err);
+    outputStream.end();
+
+    await cleanupFiles();
+  });
+
+  outputStream.on('error', err => {
+    console.error('Error writing to output file:', err);
+  });
 };
 
 const writeSummaryHTML = async (allIssues, storagePath, htmlFilename = 'summary') => {
@@ -215,61 +398,157 @@ const writeSummaryHTML = async (allIssues, storagePath, htmlFilename = 'summary'
   fs.writeFileSync(`${storagePath}/${htmlFilename}.html`, html);
 };
 
-// Proper base64 encoding function using Buffer
-const base64Encode = data => {
+function writeFormattedValue(value, writeStream) {
+  if (typeof value === 'function') {
+    writeStream.write('null');
+  } else if (value === undefined) {
+    writeStream.write('null');
+  } else if (typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number') {
+    writeStream.write(JSON.stringify(value));
+  } else if (value === null) {
+    writeStream.write('null');
+  }
+}
+
+function serializeObject(obj, writeStream, depth = 0, indent = '  ') {
+  const currentIndent = indent.repeat(depth);
+  const nextIndent = indent.repeat(depth + 1);
+
+  if (obj instanceof Date) {
+    writeStream.write(JSON.stringify(obj.toISOString()));
+  } else if (Array.isArray(obj)) {
+    writeStream.write('[\n');
+    obj.forEach((item, index) => {
+      if (index > 0) writeStream.write(',\n');
+      writeStream.write(nextIndent);
+      serializeObject(item, writeStream, depth + 1, indent);
+    });
+    writeStream.write(`\n${currentIndent}]`);
+  } else if (typeof obj === 'object' && obj !== null) {
+    writeStream.write('{\n');
+    const keys = Object.keys(obj);
+    keys.forEach((key, index) => {
+      if (index > 0) writeStream.write(',\n');
+      writeStream.write(`${nextIndent}${JSON.stringify(key)}: `);
+      serializeObject(obj[key], writeStream, depth + 1, indent);
+    });
+    writeStream.write(`\n${currentIndent}}`);
+  } else {
+    writeFormattedValue(obj, writeStream);
+  }
+}
+
+function writeLargeJsonToFile(obj, filePath) {
+  return new Promise((resolve, reject) => {
+    const writeStream = fs.createWriteStream(filePath, { encoding: 'utf8' });
+
+    writeStream.on('error', error => {
+      console.error('Stream error:', error);
+      reject(error);
+    });
+
+    writeStream.on('finish', () => {
+      console.log('File written successfully:', filePath);
+      resolve(true);
+    });
+
+    serializeObject(obj, writeStream);
+    writeStream.end();
+  });
+}
+
+const base64Encode = async (data, num) => {
   try {
-    return Buffer.from(JSON.stringify(data)).toString('base64');
+    const tempFilename =
+      num === 1
+        ? `scanItems_${uuidv4()}.json`
+        : num === 2
+          ? `scanData_${uuidv4()}.json`
+          : `${uuidv4()}.json`;
+    const tempFilePath = path.join(process.cwd(), tempFilename);
+
+    await writeLargeJsonToFile(data, tempFilePath);
+
+    const outputFilename = `encoded_${uuidv4()}.txt`;
+    const outputFilePath = path.join(process.cwd(), outputFilename);
+
+    try {
+      const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+      const readStream = fs.createReadStream(tempFilePath, {
+        encoding: 'utf8',
+        highWaterMark: CHUNK_SIZE,
+      });
+      const writeStream = fs.createWriteStream(outputFilePath, { encoding: 'utf8' });
+
+      for await (const chunk of readStream) {
+        const encodedChunk = Buffer.from(chunk).toString('base64');
+        writeStream.write(`${encodedChunk}.`);
+      }
+
+      await new Promise((resolve, reject) => {
+        writeStream.end(resolve);
+        writeStream.on('error', reject);
+      });
+
+      return outputFilePath;
+    } finally {
+      await fs.promises
+        .unlink(tempFilePath)
+        .catch(err => console.error('Temp file delete error:', err));
+    }
   } catch (error) {
-    console.error('Error encoding data to base64:', error);
+    console.error('Error encoding data to Base64:', error);
     throw error;
   }
 };
 
-const writeBase64 = async (allIssues, storagePath, htmlFilename = 'report.html') => {
-  const { items, ...rest } = allIssues;
+const streamEncodedDataToFile = async (inputFilePath, writeStream, appendComma) => {
+  const readStream = fs.createReadStream(inputFilePath, { encoding: 'utf8' });
+  let isFirstChunk = true;
 
-  const encodedScanItems = base64Encode(items);
-  const encodedScanData = base64Encode(rest);
+  for await (const chunk of readStream) {
+    if (isFirstChunk) {
+      isFirstChunk = false;
+      writeStream.write(chunk);
+    } else {
+      writeStream.write(chunk);
+    }
+  }
+
+  if (appendComma) {
+    writeStream.write(',');
+  }
+};
+
+const writeBase64 = async (allIssues, storagePath) => {
+  const { items, ...rest } = allIssues;
+  const encodedScanItemsPath = await base64Encode(items, 1);
+  const encodedScanDataPath = await base64Encode(rest, 2);
 
   const filePath = path.join(storagePath, 'scanDetails.csv');
-
   const directoryPath = path.dirname(filePath);
+
   if (!fs.existsSync(directoryPath)) {
     fs.mkdirSync(directoryPath, { recursive: true });
   }
 
-  await fs.promises.writeFile(
-    filePath,
-    `scanData_base64,scanItems_base64\n${encodedScanData},${encodedScanItems}`,
-  );
+  const csvWriteStream = fs.createWriteStream(filePath, { encoding: 'utf8' });
 
-  const htmlFilePath = path.join(storagePath, htmlFilename);
-  let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
+  csvWriteStream.write('scanData_base64,scanItems_base64\n');
+  await streamEncodedDataToFile(encodedScanDataPath, csvWriteStream, true);
+  await streamEncodedDataToFile(encodedScanItemsPath, csvWriteStream, false);
 
-  const headIndex = htmlContent.indexOf('</head>');
-  const injectScript = `
-  <script>
-    // Function to decode Base64
-    const base64Decode = (data) => {
-      const compressedBytes = Uint8Array.from(atob(data), c => c.charCodeAt(0));
-      const jsonString = new TextDecoder().decode(compressedBytes);
-      return JSON.parse(jsonString);
-    };
+  await new Promise((resolve, reject) => {
+    csvWriteStream.end(resolve);
+    csvWriteStream.on('error', reject);
+  });
 
-    // Check if encodedScanData and encodedScanItems are defined
-    // Decode the encoded data
-    scanData = base64Decode('${encodedScanData}');
-    scanItems = base64Decode('${encodedScanItems}');
-  </script>
-  `;
-
-  if (headIndex !== -1) {
-    htmlContent = htmlContent.slice(0, headIndex) + injectScript + htmlContent.slice(headIndex);
-  } else {
-    htmlContent += injectScript;
-  }
-
-  fs.writeFileSync(htmlFilePath, htmlContent);
+  await fs.promises
+    .unlink(encodedScanDataPath)
+    .catch(err => console.error('Encoded file delete error:', err));
+  await fs.promises
+    .unlink(encodedScanItemsPath)
+    .catch(err => console.error('Encoded file delete error:', err));
 };
 
 let browserChannel = 'chrome';
@@ -282,7 +561,7 @@ if (os.platform() === 'linux') {
   browserChannel = 'chromium';
 }
 
-const writeSummaryPdf = async (storagePath, filename = 'summary') => {
+const writeSummaryPdf = async (storagePath, pagesScanned, filename = 'summary') => {
   const htmlFilePath = `${storagePath}/${filename}.html`;
   const fileDestinationPath = `${storagePath}/${filename}.pdf`;
   const browser = await chromium.launch({
@@ -321,7 +600,9 @@ const writeSummaryPdf = async (storagePath, filename = 'summary') => {
   await context.close();
   await browser.close();
 
-  fs.unlinkSync(htmlFilePath);
+  if (pagesScanned < 2000) {
+    fs.unlinkSync(htmlFilePath);
+  }
 };
 
 const pushResults = async (pageResults, allIssues, isCustomFlow) => {
@@ -618,67 +899,19 @@ const generateArtifacts = async (
 
   if (process.env.OOBEE_VERBOSE) {
     const axeImpactCount = getAxeImpactCount(allIssues);
-
-    const scanData = {
-      url: allIssues.urlScanned,
-      startTime: formatDateTimeForMassScanner(allIssues.startTime),
-      endTime: formatDateTimeForMassScanner(allIssues.endTime),
-      pagesScanned: allIssues.pagesScanned.length,
-      wcagPassPercentage: allIssues.wcagPassPercentage,
-      critical: axeImpactCount.critical,
-      serious: axeImpactCount.serious,
-      moderate: axeImpactCount.moderate,
-      minor: axeImpactCount.minor,
-      mustFix: {
-        issues: allIssues.items.mustFix.rules.length,
-        occurrence: allIssues.items.mustFix.totalItems,
-        rules: allIssues.items.mustFix.rules,
-      },
-      goodToFix: {
-        issues: allIssues.items.goodToFix.rules.length,
-        occurrence: allIssues.items.goodToFix.totalItems,
-        rules: allIssues.items.goodToFix.rules,
-      },
-      needsReview: {
-        issues: allIssues.items.needsReview.rules.length,
-        occurrence: allIssues.items.needsReview.totalItems,
-        rules: allIssues.items.needsReview.rules,
-      },
-      passed: {
-        occurrence: allIssues.items.passed.totalItems,
-      },
-    };
-
     const { items, startTime, endTime, ...rest } = allIssues;
-    const encodedScanItems = base64Encode(items);
-    const formattedStartTime = formatDateTimeForMassScanner(startTime);
-    const formattedEndTime = formatDateTimeForMassScanner(endTime);
+
     rest.critical = axeImpactCount.critical;
     rest.serious = axeImpactCount.serious;
     rest.moderate = axeImpactCount.moderate;
     rest.minor = axeImpactCount.minor;
-
-    // Adding encoded start time and end time to rest object
-    rest.formattedStartTime = formattedStartTime;
-    rest.formattedEndTime = formattedEndTime;
-
-    const encodedScanData = base64Encode(rest);
-
-    const scanDetailsMessage = {
-      type: 'scanDetailsMessage',
-      payload: { scanData: encodedScanData, scanItems: encodedScanItems },
-    };
-
-    if (process.send) {
-      process.send(JSON.stringify(scanDetailsMessage));
-    }
   }
 
   await writeCsv(allIssues, storagePath);
-  await writeHTML(allIssues, storagePath);
   await writeBase64(allIssues, storagePath);
   await writeSummaryHTML(allIssues, storagePath);
-  await retryFunction(() => writeSummaryPdf(storagePath), 1);
+  await writeHTML(allIssues, storagePath);
+  await retryFunction(() => writeSummaryPdf(storagePath, pagesScanned.length), 1);
 
   // Take option if set
   if (typeof zip === 'string') {
@@ -709,6 +942,12 @@ const generateArtifacts = async (
           type: 'zipFileName',
           payload: `${constants.cliZipFileName}`,
         };
+        const storagePathMessage = {
+          type: 'storagePath',
+          payload: `${storagePath}`,
+        };
+
+        process.send(JSON.stringify(storagePathMessage));
 
         process.send(JSON.stringify(zipFileNameMessage));
       }
