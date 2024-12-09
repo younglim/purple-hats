@@ -18,6 +18,7 @@ export const takeScreenshotForHTMLElements = async (
 ): Promise<ResultWithScreenshot[]> => {
   const newViolations: ResultWithScreenshot[] = [];
   let screenshotCount = 0;
+
   for (const violation of violations) {
     if (screenshotCount >= maxScreenshots) {
       consoleLogger.warn(
@@ -26,6 +27,16 @@ export const takeScreenshotForHTMLElements = async (
       newViolations.push(violation);
       continue;
     }
+
+    const { id: rule } = violation;
+
+    // Check if rule ID is 'oobee-grading-text-contents' and skip screenshot logic
+    if (rule === 'oobee-grading-text-contents') {
+      console.log('Skipping screenshot for rule oobee-grading-text-contents');
+      newViolations.push(violation); // Make sure it gets added
+      continue;
+    }
+
     const newViolationNodes: NodeResultWithScreenshot[] = [];
     for (const node of violation.nodes) {
       const nodeWithScreenshotPath: NodeResultWithScreenshot = node;
@@ -60,6 +71,7 @@ export const takeScreenshotForHTMLElements = async (
     violation.nodes = newViolationNodes;
     newViolations.push(violation);
   }
+  // console.log('Processed Violations (after screenshots):', JSON.stringify(newViolations, null, 2));
   return newViolations;
 };
 

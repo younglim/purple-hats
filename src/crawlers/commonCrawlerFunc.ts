@@ -13,6 +13,7 @@ import { takeScreenshotForHTMLElements } from '../screenshotFunc/htmlScreenshotF
 import { isFilePath } from '../constants/common.js';
 import { customAxeConfig } from './customAxeFunctions.js';
 import { flagUnlabelledClickableElements } from './custom/flagUnlabelledClickableElements.js';
+import { extractAndGradeText } from './custom/extractAndGradeText.js';
 import { ItemsInfo } from '../mergeAxeResults.js';
 
 // types
@@ -83,6 +84,7 @@ export const filterAxeResults = (
     if (rule === 'frame-tested') return;
 
     const conformance = tags.filter(tag => tag.startsWith('wcag') || tag === 'best-practice');
+
     // handle rare cases where conformance level is not the first element
     const levels = ['wcag2a', 'wcag2aa', 'wcag2aaa'];
     if (conformance[0] !== 'best-practice' && !levels.includes(conformance[0])) {
@@ -291,6 +293,8 @@ export const runAxeScript = async ({
 
   const enableWcagAaa = ruleset.includes(RuleFlags.ENABLE_WCAG_AAA);
 
+  const gradingReadabilityFlag = await extractAndGradeText(page); // Ensure flag is obtained before proceeding
+
   await crawlee.playwrightUtils.injectFile(page, axeScript);
 
   const results = await page.evaluate(
@@ -301,6 +305,7 @@ export const runAxeScript = async ({
       disableOobee,
       enableWcagAaa,
       oobeeAccessibleLabelFlaggedCssSelectors,
+      gradingReadabilityFlag,
     }) => {
       try {
         const evaluateAltText = (node: Element) => {
@@ -338,6 +343,31 @@ export const runAxeScript = async ({
             {
               ...customAxeConfig.checks[0],
               evaluate: evaluateAltText,
+            },
+            {
+              ...customAxeConfig.checks[1],
+              evaluate: (node: HTMLElement) => {
+                return !node.dataset.flagged; // fail any element with a data-flagged attribute set to true
+              },
+            },
+            {
+              ...customAxeConfig.checks[2],
+              evaluate: (_node: HTMLElement) => {
+                if (gradingReadabilityFlag === '') {
+                  return true; // Pass if no readability issues
+                }
+                // Dynamically update the grading messages
+                const gradingCheck = customAxeConfig.checks.find(
+                  check => check.id === 'oobee-grading-text-contents',
+                );
+                if (gradingCheck) {
+                  gradingCheck.metadata.messages.incomplete = `The text content is potentially difficult to read, with a Flesch-Kincaid Reading Ease score of ${
+                    gradingReadabilityFlag
+                  }.\nThe target passing score is above 50, indicating content readable by university students and lower grade levels.\nA higher score reflects better readability.`;
+                }
+
+                // Fail if readability issues are detected
+              },
             },
           ],
           rules: customAxeConfig.rules
@@ -385,19 +415,19 @@ export const runAxeScript = async ({
               if (!element) {
                 const shadowRoots = [];
                 const allElements = document.querySelectorAll('*');
-                
+
                 // Look for elements with shadow roots
                 allElements.forEach(el => {
                   if (el.shadowRoot) {
                     shadowRoots.push(el.shadowRoot);
                   }
                 });
-          
+
                 // Search inside each shadow root for the element
                 for (const shadowRoot of shadowRoots) {
                   const shadowElement = shadowRoot.querySelector(cssSelector);
                   if (shadowElement) {
-                    element = shadowElement;  // Found the element inside shadow DOM
+                    element = shadowElement; // Found the element inside shadow DOM
                     break;
                   }
                 }
@@ -414,7 +444,7 @@ export const runAxeScript = async ({
               help: 'Clickable elements (i.e. elements with mouse-click interaction) must have accessible labels.',
               helpUrl: 'https://www.deque.com/blog/accessible-aria-buttons',
               nodes: escapedCssSelectors.map(cssSelector => ({
-                html: document.querySelector(cssSelector).outerHTML,
+                html: findElementByCssSelector(cssSelector),
                 target: [cssSelector],
                 impact: 'serious' as ImpactValue,
                 failureSummary:
@@ -452,6 +482,7 @@ export const runAxeScript = async ({
       disableOobee,
       enableWcagAaa,
       oobeeAccessibleLabelFlaggedCssSelectors,
+      gradingReadabilityFlag,
     },
   );
 
@@ -461,6 +492,7 @@ export const runAxeScript = async ({
   }
 
   const pageTitle = await page.evaluate(() => document.title);
+
   return filterAxeResults(results, pageTitle, customFlowDetails);
 };
 
