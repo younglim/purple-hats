@@ -95,7 +95,7 @@ const combineRun = async (details: Data, deviceToScan: string) => {
     requestUrl: finalUrl,
     urlsCrawled: new UrlsCrawled(),
     isIncludeScreenshots: envDetails.includeScreenshots,
-    isAllowSubdomains: envDetails.includeScreenshots,
+    isAllowSubdomains: envDetails.strategy,
     isEnableCustomChecks: envDetails.ruleset,
     isEnableWcagAaa: envDetails.ruleset,
     isSlowScanMode: envDetails.specifiedMaxConcurrency,
