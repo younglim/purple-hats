@@ -502,9 +502,9 @@ const base64Encode = async (data, num, storagePath, generateJsonFiles) => {
       return outputFilePath;
     } finally {
       if (!generateJsonFiles) {
-      await fs.promises
-        .unlink(tempFilePath)
-        .catch(err => console.error('Temp file delete error:', err));
+        await fs.promises
+          .unlink(tempFilePath)
+          .catch(err => console.error('Temp file delete error:', err));
       }
     }
   } catch (error) {
@@ -782,7 +782,6 @@ const generateArtifacts = async (
   const intermediateDatasetsPath = `${randomToken}/datasets/${randomToken}`;
   const phAppVersion = getVersion();
   const storagePath = getStoragePath(randomToken);
-  consoleLogger.info(`scanDetails is ${JSON.stringify(scanDetails, null, 2)}`);
 
   urlScanned =
     scanType === ScannerTypes.SITEMAP || scanType === ScannerTypes.LOCALFILE
