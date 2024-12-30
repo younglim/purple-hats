@@ -850,7 +850,7 @@ const generateArtifacts = async (
     // Populate boolean values for id="advancedScanOptionsSummary"
     advancedScanOptionsSummaryItems: {
       showIncludeScreenshots: [true].includes(scanDetails.isIncludeScreenshots),
-      showAllowSubdomains: [true].includes(scanDetails.isAllowSubdomains),
+      showAllowSubdomains: ['same-domain'].includes(scanDetails.isAllowSubdomains),
       showEnableCustomChecks: ['default', 'enable-wcag-aaa'].includes(
         scanDetails.isEnableCustomChecks?.[0],
       ),
