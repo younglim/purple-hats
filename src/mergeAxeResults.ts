@@ -441,122 +441,142 @@ function writeLargeJsonToFile(obj: object, filePath: string) {
 }
 
 const writeLargeScanItemsJsonToFile = async (obj: object, filePath: string) => {
-  const writeStream = fs.createWriteStream(filePath, { flags: 'a', encoding: 'utf8' });
+  return new Promise((resolve, reject) => {
+    const writeStream = fs.createWriteStream(filePath, { flags: 'a', encoding: 'utf8' });
+    const writeQueue: string[] = [];
+    let isWriting = false;
 
-  try {
-    writeStream.write('{\n');
+    const processNextWrite = async () => {
+      if (isWriting || writeQueue.length === 0) return;
 
-    const keys = Object.keys(obj);
+      isWriting = true;
+      const data = writeQueue.shift()!;
 
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const value = obj[key];
-
-      // Start writing the key object
-      writeStream.write(`  "${key}": {\n`);
-
-      const { rules, ...otherProperties } = value; // Extract rules and other properties dynamically
-
-      // Write all properties dynamically, excluding rules
-      const otherKeys = Object.keys(otherProperties);
-      for (let j = 0; j < otherKeys.length; j++) {
-        const propKey = otherKeys[j];
-        const propValue = otherProperties[propKey];
-
-        // Serialize and write the property dynamically
-        writeStream.write(`    "${propKey}": ${JSON.stringify(propValue)}`);
-
-        // Add a comma unless it's the last property or the next property is "rules"
-        if (j < otherKeys.length - 1 || (rules && rules.length > 0) || propKey === 'totalItems') {
-          writeStream.write(',\n');
-        } else {
-          writeStream.write('\n');
+      try {
+        if (!writeStream.write(data)) {
+          await new Promise<void>(resolve => {
+            writeStream.once('drain', () => {
+              resolve();
+            });
+          });
         }
+      } catch (error) {
+        writeStream.destroy(error as Error);
+        return;
       }
 
-      if (rules && Array.isArray(rules)) {
-        writeStream.write(`    "rules": [\n`);
+      isWriting = false;
+      processNextWrite();
+    };
 
-        for (let j = 0; j < rules.length; j++) {
-          const rule = rules[j];
+    const queueWrite = (data: string) => {
+      writeQueue.push(data);
+      processNextWrite();
+    };
 
-          writeStream.write('      {\n'); // Start the rule object
+    writeStream.on('error', error => {
+      consoleLogger.error(`Error writing object to JSON file: ${error}`);
+      reject(error);
+    });
 
-          const { pagesAffected, ...otherRuleProperties } = rule; // Extract pagesAffected dynamically
+    writeStream.on('finish', () => {
+      consoleLogger.info(`JSON file written successfully: ${filePath}`);
+      resolve(true);
+    });
 
-          // Write other properties dynamically
-          const ruleKeys = Object.keys(otherRuleProperties);
-          for (let k = 0; k < ruleKeys.length; k++) {
-            const ruleKey = ruleKeys[k];
-            const ruleValue = otherRuleProperties[ruleKey];
+    try {
+      queueWrite('{\n');
+      const keys = Object.keys(obj);
 
-            // Serialize and write each property dynamically
-            writeStream.write(`        "${ruleKey}": ${JSON.stringify(ruleValue)}`);
+      keys.forEach((key, i) => {
+        const value = obj[key];
+        queueWrite(`  "${key}": {\n`);
 
-            // Add a comma unless it's the last property and no pagesAffected is present
-            if (k < ruleKeys.length - 1 || pagesAffected) {
-              writeStream.write(',\n');
-            } else {
-              writeStream.write('\n');
-            }
-          }
+        const { rules, ...otherProperties } = value;
 
-          if (pagesAffected && Array.isArray(pagesAffected)) {
-            writeStream.write(`        "pagesAffected": [\n`);
-
-            for (let p = 0; p < pagesAffected.length; p++) {
-              const page = pagesAffected[p];
-
-              writeStream.write('          '); // Indentation for each page object
-              const pageGenerator = serializeObject(page, 5); // Serialize each page object
-
-              let pageNext: any;
-              while (!(pageNext = pageGenerator.next()).done) {
-                if (!writeStream.write(pageNext.value)) {
-                  await new Promise(resolve => writeStream.once('drain', resolve));
-                }
-              }
-
-              if (p < pagesAffected.length - 1) {
-                writeStream.write(',\n'); // Comma between pages in the chunk
-              } else {
-                writeStream.write('\n'); // No trailing comma for the last page in the chunk
-              }
-            }
-
-            writeStream.write('        ]'); // Close the pagesAffected array
-          }
-
-          writeStream.write('\n      }'); // Close the rule object
-
-          if (j < rules.length - 1) {
-            writeStream.write(',\n'); // Comma between rules
+        // Write other properties
+        Object.entries(otherProperties).forEach(([propKey, propValue], j) => {
+          queueWrite(`    "${propKey}": ${JSON.stringify(propValue)}`);
+          if (j < Object.keys(otherProperties).length - 1 || (rules && rules.length >= 0)) {
+            queueWrite(',\n');
           } else {
-            writeStream.write('\n'); // No trailing comma for the last rule
+            queueWrite('\n');
           }
+        });
+
+        if (rules && Array.isArray(rules)) {
+          queueWrite('    "rules": [\n');
+
+          rules.forEach((rule, j) => {
+            queueWrite('      {\n');
+            const { pagesAffected, ...otherRuleProperties } = rule;
+
+            Object.entries(otherRuleProperties).forEach(([ruleKey, ruleValue], k) => {
+              queueWrite(`        "${ruleKey}": ${JSON.stringify(ruleValue)}`);
+              if (k < Object.keys(otherRuleProperties).length - 1 || pagesAffected) {
+                queueWrite(',\n');
+              } else {
+                queueWrite('\n');
+              }
+            });
+
+            if (pagesAffected && Array.isArray(pagesAffected)) {
+              queueWrite('        "pagesAffected": [\n');
+
+              pagesAffected.forEach((page, p) => {
+                const pageJson = JSON.stringify(page, null, 2)
+                  .split('\n')
+                  .map((line, idx) => (idx === 0 ? `          ${line}` : `          ${line}`))
+                  .join('\n');
+
+                queueWrite(pageJson);
+
+                if (p < pagesAffected.length - 1) {
+                  queueWrite(',\n');
+                } else {
+                  queueWrite('\n');
+                }
+              });
+
+              queueWrite('        ]');
+            }
+
+            queueWrite('\n      }');
+            if (j < rules.length - 1) {
+              queueWrite(',\n');
+            } else {
+              queueWrite('\n');
+            }
+          });
+
+          queueWrite('    ]');
         }
 
-        writeStream.write('    ]'); // Close the rules array
-      }
+        queueWrite('\n  }');
+        if (i < keys.length - 1) {
+          queueWrite(',\n');
+        } else {
+          queueWrite('\n');
+        }
+      });
 
-      writeStream.write('\n  }'); // Close the key object here, after processing all fields of the current key
+      queueWrite('}\n');
 
-      // Add a comma between keys if not the last key
-      if (i < keys.length - 1) {
-        writeStream.write(',\n'); // Comma between top-level keys
-      } else {
-        writeStream.write('\n'); // No trailing comma after the last key
-      }
+      // Ensure all queued writes are processed before ending
+      const checkQueueAndEnd = () => {
+        if (writeQueue.length === 0 && !isWriting) {
+          writeStream.end();
+        } else {
+          setTimeout(checkQueueAndEnd, 100);
+        }
+      };
+
+      checkQueueAndEnd();
+    } catch (err) {
+      writeStream.destroy(err as Error);
+      reject(err);
     }
-
-    writeStream.write('}\n'); // Close the main object
-    consoleLogger.info(`JSON file written successfully: ${filePath}`);
-  } catch (err) {
-    consoleLogger.error(`Error writing object to JSON file: ${err}`);
-    throw err;
-  } finally {
-    writeStream.end();
-  }
+  });
 };
 
 async function compressJsonFileStreaming(inputPath: string, outputPath: string) {
@@ -732,7 +752,7 @@ const writeSummaryPdf = async (storagePath: string, pagesScanned: number, filena
   const browser = await chromium.launch({
     headless: false,
     channel: browserChannel,
-    args: ['--headless=new', '--no-sandbox']
+    args: ['--headless=new', '--no-sandbox'],
   });
 
   const context = await browser.newContext({
