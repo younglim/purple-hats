@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NODE_VERSION="20.10.0"
+NODE_VERSION="22.13.1"
 
 # Get current shell command
 SHELL_COMMAND=$(ps -o comm= -p $$)
