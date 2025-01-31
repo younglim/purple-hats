@@ -14,31 +14,41 @@ Details of each issue and severity rating provided by the current scan engine.
 
 ## Conformance Covered
 
-| Conformance |
-| ----------- |
-| WCAG 1.1.1  |
-| WCAG 1.2.2  |
-| WCAG 1.3.1  |
-| WCAG 1.3.5  |
-| WCAG 1.4.1  |
-| WCAG 1.4.12 |
-| WCAG 1.4.2  |
-| WCAG 1.4.3  |
-| WCAG 1.4.4  |
-| WCAG 1.4.6  |
-| WCAG 2.1.1  |
-| WCAG 2.2.1  |
-| WCAG 2.2.2  |
-| WCAG 2.2.4  |
-| WCAG 2.4.1  |
-| WCAG 2.4.2  |
-| WCAG 2.4.4  |
-| WCAG 2.4.9  |
-| WCAG 3.1.1  |
-| WCAG 3.1.2  |
-| WCAG 3.3.2  |
-| WCAG 3.2.5  |
-| WCAG 4.1.2  |
+Note: Level AAA are disabled by default.  Please specify `enable-wcag-aaa` in ruleset flag to enable AAA rules.
+
+| Conformance | Level |
+|-------------|-------|
+| WCAG 1.1.1  | A     |
+| WCAG 1.2.2  | A     |
+| WCAG 1.3.1  | A     |
+| WCAG 1.3.5  | AA    |
+| WCAG 1.4.1  | A     |
+| WCAG 1.4.12 | AA    |
+| WCAG 1.4.2  | A     |
+| WCAG 1.4.3  | AA    |
+| WCAG 1.4.4  | AA    |
+| WCAG 1.4.6  | AAA   |
+| WCAG 2.1.1  | A     |
+| WCAG 2.2.1  | A     |
+| WCAG 2.2.2  | A     |
+| WCAG 2.2.4  | AA    |
+| WCAG 2.4.1  | A     |
+| WCAG 2.4.2  | A     |
+| WCAG 2.4.4  | A     |
+| WCAG 2.4.9  | AAA   |
+| WCAG 3.1.1  | A     |
+| WCAG 3.1.2  | AA    |
+| WCAG 3.2.5  | AA    |
+| WCAG 3.3.2  | A     |
+| WCAG 4.1.2  | A     |
+
+### Summary
+| Level | Count |
+|-------|-------|
+| A     | 14    |
+| AA    | 6     |
+| AAA   | 3     |
+
 
 ## WCAG 2.0 Level A
 
@@ -99,6 +109,8 @@ Details of each issue and severity rating provided by the current scan engine.
 | td-headers-attr             | Ensure that each cell in a table that uses the headers attribute refers only to other cells in that table                                             | Must Fix    | WCAG 1.3.1             |
 | th-has-data-cells           | Ensure that `<th>` elements and elements with role=columnheader/rowheader have data cells they describe                                               | Must Fix    | WCAG 1.3.1             |
 | video-caption               | Ensures `<video>` elements have captions                                                                                                              | Must Fix    | WCAG 1.2.2             |
+| oobee-accessible-label               | Clickable elements (i.e. elements with mouse-click interaction) must have accessible labels.                                                                                                              | Must Fix    | WCAG 2.1.1, WCAG 4.1.2             |
+| oobee-grading-text-contents               | Text content should be clear and plain to ensure that it is easily understood.                                                                                                              | Needs Review    | WCAG 3.1.5             |
 
 ## WCAG 2.0 Level AA
 
