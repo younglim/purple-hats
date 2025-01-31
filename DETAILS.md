@@ -112,7 +112,6 @@ Note: Level AAA are disabled by default.  Please specify `enable-wcag-aaa` in ru
 | video-caption               | Ensures `<video>` elements have captions                                                                                                              | Must Fix    | WCAG 1.2.2             |
 | oobee-confusing-alt-text               | The image alt text set as 'img', 'image', 'picture', 'photo', or 'graphic' is confusing or not useful                                                                                                                            | Must Fix    | WCAG 1.1.1  
 | oobee-accessible-label               | Clickable elements (i.e. elements with mouse-click interaction) must have accessible labels.                                                                                                              | Must Fix    | WCAG 2.1.1, WCAG 4.1.2             |
-| oobee-grading-text-contents               | Text content should be clear and plain to ensure that it is easily understood.                                                                                                              | Needs Review    | WCAG 3.1.5             |
 
 ## WCAG 2.0 Level AA
 
@@ -142,6 +141,7 @@ Note: Level AAA are disabled by default.  Please specify `enable-wcag-aaa` in ru
 | color-contrast-enhanced      | Ensure the contrast between foreground and background colors meets WCAG 2 AAA enhanced contrast ratio thresholds | Must Fix    | WCAG 1.4.6             |
 | identical-links-same-purpose | Ensure that links with the same accessible name serve a similar purpose                                          | Good to Fix | WCAG 2.4.9             |
 | meta-refresh-no-exceptions   | Ensure <meta http-equiv="refresh"> is not used for delayed refresh                                               | Good to Fix | WCAG 2.2.4, WCAG 3.2.5 |
+| oobee-grading-text-contents               | Text content should be clear and plain to ensure that it is easily understood.                                                                                                              | Needs Review    | WCAG 3.1.5             |
 
 ## Best Practice
 
