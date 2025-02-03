@@ -5,24 +5,14 @@
     <span aria-label="Pass percentage" class="ms-2" id="passPercentage"></span>
   </div>
   <div class="wcag-compliance-passes-bar">
-    <div
-      class="wcag-compliance-passes-bar-progress"
-      id="wcag-compliance-passes-bar-progress"
-      style="width: 0%"
-    ></div>
+    <div class="wcag-compliance-passes-bar-progress" id="wcag-compliance-passes-bar-progress" style="width: 0%"></div>
   </div>
   <button id="wcagModalToggle" type="button" data-bs-toggle="modal" data-bs-target="#wcagModal">
     More details
   </button>
 </div>
 <!-- START Modal Pop up -->
-<div
-  id="wcagModal"
-  class="modal fade"
-  tabindex="-1"
-  aria-labelledby="wcagModalLabel"
-  aria-hidden="true"
->
+<div id="wcagModal" class="modal fade" tabindex="-1" aria-labelledby="wcagModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
@@ -31,28 +21,19 @@
       </div>
       <div class="modal-body">
         <div>
-          Only 20 WCAG 2.2 Success Criteria can be checked reasonably through automated testing:
+          Only 20 WCAG 2.2 Success Criteria (A & AA) can be checked reasonably through automated testing:
         </div>
         <div class="accordion my-3" id="wcagLinksAccordion">
           <div class="accordion-item">
             <div class="accordion-header" id="wcagLinksAccordionTitle">
-              <button
-                class="accordion-button collapsed"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#wcagLinksAccordionContent"
-                aria-expanded="false"
-                aria-controls="wcagLinksAccordionContent"
-              >
-                20 WCAG Success Criteria (A & AA)
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#wcagLinksAccordionContent" aria-expanded="false"
+                aria-controls="wcagLinksAccordionContent">
+                20 (A & AA) and 4 (AAA) WCAG Success Criteria
               </button>
             </div>
-            <div
-              id="wcagLinksAccordionContent"
-              class="accordion-collapse collapse"
-              aria-labelledby="wcagLinksAccordionTitle"
-              data-bs-parent="#accordionExample"
-            >
+            <div id="wcagLinksAccordionContent" class="accordion-collapse collapse"
+              aria-labelledby="wcagLinksAccordionTitle" data-bs-parent="#accordionExample">
               <div class="accordion-body">
                 <ul id="wcagLinksList"></ul>
               </div>
