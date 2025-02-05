@@ -23,11 +23,11 @@ Note: Level AAA are disabled by default.  Please specify `enable-wcag-aaa` in ru
 | WCAG 1.3.1  | A     |
 | WCAG 1.3.5  | AA    |
 | WCAG 1.4.1  | A     |
-| WCAG 1.4.12 | AA    |
 | WCAG 1.4.2  | A     |
 | WCAG 1.4.3  | AA    |
 | WCAG 1.4.4  | AA    |
 | WCAG 1.4.6  | AAA   |
+| WCAG 1.4.12 | AA    |
 | WCAG 2.1.1  | A     |
 | WCAG 2.2.1  | A     |
 | WCAG 2.2.2  | A     |
@@ -36,19 +36,20 @@ Note: Level AAA are disabled by default.  Please specify `enable-wcag-aaa` in ru
 | WCAG 2.4.2  | A     |
 | WCAG 2.4.4  | A     |
 | WCAG 2.4.9  | AAA   |
+| WCAG 2.5.8  | AA    |
 | WCAG 3.1.1  | A     |
 | WCAG 3.1.2  | AA    |
 | WCAG 3.1.5  | AAA   |
-| WCAG 3.2.5  | AA    |
+| WCAG 3.2.5  | AAA   |
 | WCAG 3.3.2  | A     |
 | WCAG 4.1.2  | A     |
 
 ### Summary
 | Level | Count |
 |-------|-------|
-| A     | 14    |
-| AA    | 6     |
-| AAA   | 4     |
+| A     | 15    |
+| AA    | 5     |
+| AAA   | 5     |
 
 
 ## WCAG 2.0 Level A
