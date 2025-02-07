@@ -445,6 +445,7 @@ const checkUrlConnectivityWithBrowser = async (
         silentLogger.info('Unable to detect networkidle');
       }
 
+      // This response state doesn't seem to work with the new headless=new flag
       if (response.status() === 401) {
         res.status = constants.urlCheckStatuses.unauthorised.code;
       } else {
@@ -467,8 +468,14 @@ const checkUrlConnectivityWithBrowser = async (
         res.content = responseFromUrl.content;
       }
     } catch (error) {
-      silentLogger.error(error);
-      res.status = constants.urlCheckStatuses.systemError.code;
+
+      // But this does work with the headless=new flag
+      if (error.message.includes('net::ERR_INVALID_AUTH_CREDENTIALS')) {
+        res.status = constants.urlCheckStatuses.unauthorised.code;
+      } else {
+        // enters here if input is not a URL or not using http/https protocols
+        res.status = constants.urlCheckStatuses.systemError.code;
+      }
     } finally {
       await browserContext.close();
     }
