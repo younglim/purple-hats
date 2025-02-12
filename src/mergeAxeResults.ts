@@ -219,8 +219,46 @@ const writeCsv = async (allIssues, storagePath) => {
     includeEmptyRows: true,
   };
 
+  // Create the parse stream (it’s asynchronous)
   const parser = new AsyncParser(opts);
-  parser.parse(allIssues).pipe(csvOutput);
+  const parseStream = parser.parse(allIssues);
+
+  // Pipe JSON2CSV output into the file, but don't end automatically
+  parseStream.pipe(csvOutput, { end: false });
+
+  // Once JSON2CSV is done writing all normal rows, append any "pagesNotScanned"
+  parseStream.on('end', () => {
+    if (allIssues.pagesNotScanned && allIssues.pagesNotScanned.length > 0) {
+      csvOutput.write('\n');
+      allIssues.pagesNotScanned.forEach(page => {
+        const skippedPage = {
+          customFlowLabel: allIssues.customFlowLabel || '',
+          deviceChosen: allIssues.deviceChosen || '',
+          scanCompletedAt: allIssues.endTime ? allIssues.endTime.toISOString() : '',
+          severity: 'error',
+          issueId: 'error-pages-skipped',
+          issueDescription: 'Page was skipped during the scan',
+          wcagConformance: '',
+          url: page.url || '',
+          pageTitle: '',
+          context: '',
+          howToFix: '',
+          axeImpact: '',
+          xpath: '',
+          learnMore: '',
+        };
+        csvOutput.write(`${Object.values(skippedPage).join(',')}\n`);
+      });
+    }
+
+    // Now close the CSV file
+    csvOutput.end();
+  });
+
+  parseStream.on('error', err => {
+    console.error('Error parsing CSV:', err);
+    csvOutput.end();
+  });
 };
 
 const compileHtmlWithEJS = async (
@@ -234,7 +272,7 @@ const compileHtmlWithEJS = async (
     filename: path.join(dirname, './static/ejs/report.ejs'),
   });
 
-  const html = template({...allIssues, storagePath: JSON.stringify(storagePath)});
+  const html = template({ ...allIssues, storagePath: JSON.stringify(storagePath) });
   await fs.writeFile(htmlFilePath, html);
 
   let htmlContent = await fs.readFile(htmlFilePath, { encoding: 'utf8' });
