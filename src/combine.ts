@@ -97,6 +97,7 @@ const combineRun = async (details: Data, deviceToScan: string) => {
     isEnableWcagAaa: envDetails.ruleset,
     isSlowScanMode: envDetails.specifiedMaxConcurrency,
     isAdhereRobots: envDetails.followRobots,
+    deviceChosen: deviceToScan,
   };
 
   const viewportSettings: ViewportSettingsClass = new ViewportSettingsClass(
