@@ -18,7 +18,7 @@ import {
   waitForPageLoaded,
   isFilePath,
 } from '../constants/common.js';
-import { areLinksEqual, isWhitelistedContentType } from '../utils.js';
+import { areLinksEqual, isWhitelistedContentType, isFollowStrategy } from '../utils.js';
 import { handlePdfDownload, runPdfScan, mapPdfScanResults } from './pdfScanFunc.js';
 import { guiInfoLog } from '../logs.js';
 
@@ -164,12 +164,24 @@ const crawlSitemap = async (
     postNavigationHooks: [
       async ({ page, request }) => {
         try {
-          // Wait for some quiet period in the DOM
+          // Wait for a quiet period in the DOM, but with safeguards
           await page.evaluate(() => {
             return new Promise((resolve) => {
               let timeout;
+              let mutationCount = 0;
+              const MAX_MUTATIONS = 250; // Prevent infinite mutations
+              const OBSERVER_TIMEOUT = 5000; // Hard timeout to exit
+
               const observer = new MutationObserver(() => {
                 clearTimeout(timeout);
+
+                mutationCount++;
+                if (mutationCount > MAX_MUTATIONS) {
+                  observer.disconnect();
+                  resolve('Too many mutations detected, exiting.');
+                  return;
+                }
+
                 timeout = setTimeout(() => {
                   observer.disconnect();
                   resolve('DOM stabilized after mutations.');
@@ -178,20 +190,19 @@ const crawlSitemap = async (
 
               timeout = setTimeout(() => {
                 observer.disconnect();
-                resolve('No mutations detected, exit from idle state');
-              }, 1000);
+                resolve('Observer timeout reached, exiting.');
+              }, OBSERVER_TIMEOUT); // Ensure the observer stops after X seconds
 
-              observer.observe(document, { childList: true, subtree: true, attributes: true });
+              observer.observe(document.documentElement, { childList: true, subtree: true });
+
             });
           });
         } catch (err) {
-          // “Execution context was destroyed”
+          // Handle page navigation errors gracefully
           if (err.message.includes('was destroyed')) {
-            // The page probably navigated or closed itself. You can safely ignore or handle it gracefully.
-            return;
+            return; // Page navigated or closed, no need to handle
           }
-          // Otherwise, rethrow unknown errors
-          throw err;
+          throw err; // Rethrow unknown errors
         }
       },
     ],
@@ -258,8 +269,7 @@ const crawlSitemap = async (
       const contentType = response.headers()['content-type'];
       const status = response.status();
 
-
-      if (blacklistedPatterns && isSkippedUrl(actualUrl, blacklistedPatterns)) {
+      if (blacklistedPatterns && !isFollowStrategy(actualUrl, request.url, "same-hostname") && isSkippedUrl(actualUrl, blacklistedPatterns)) {
         urlsCrawled.userExcluded.push({
           url: request.url,
           pageTitle: request.url,
