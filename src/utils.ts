@@ -190,7 +190,7 @@ export const cleanUp = async pathToDelete => {
 //     timeZoneName: "longGeneric",
 //   });
 
-export const getWcagPassPercentage = (wcagViolations: string[]): { passPercentageAA: string; totalWcagChecksAA: number; wcagViolationsAA: number } => {
+export const getWcagPassPercentage = (wcagViolations: string[]): { passPercentageAA: string; totalWcagChecksAA: number; totalWcagViolationsAA: number } => {
 
   // These AAA rules should not be counted as WCAG Pass Percentage only contains A and AA
   const wcagAAA = ['WCAG 1.4.6', 'WCAG 2.2.4', 'WCAG 2.4.9', 'WCAG 3.1.5', 'WCAG 3.2.5'];
@@ -205,7 +205,7 @@ export const getWcagPassPercentage = (wcagViolations: string[]): { passPercentag
   return {
     passPercentageAA: passPercentageAA.toFixed(2), // toFixed returns a string, which is correct here
     totalWcagChecksAA: totalChecksAA,
-    wcagViolationsAA: filteredWcagViolations.length,
+    totalWcagViolationsAA: filteredWcagViolations.length,
   };
 };
 
