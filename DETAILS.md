@@ -16,33 +16,33 @@ Details of each issue and severity rating provided by the current scan engine.
 
 Note: Level AAA are disabled by default.  Please specify `enable-wcag-aaa` in ruleset flag to enable AAA rules.
 
-| Conformance | Level |
-|-------------|-------|
-| WCAG 1.1.1  | A     |
-| WCAG 1.2.2  | A     |
-| WCAG 1.3.1  | A     |
-| WCAG 1.3.5  | AA    |
-| WCAG 1.4.1  | A     |
-| WCAG 1.4.2  | A     |
-| WCAG 1.4.3  | AA    |
-| WCAG 1.4.4  | AA    |
-| WCAG 1.4.6  | AAA   |
-| WCAG 1.4.12 | AA    |
-| WCAG 2.1.1  | A     |
-| WCAG 2.2.1  | A     |
-| WCAG 2.2.2  | A     |
-| WCAG 2.2.4  | AAA   |
-| WCAG 2.4.1  | A     |
-| WCAG 2.4.2  | A     |
-| WCAG 2.4.4  | A     |
-| WCAG 2.4.9  | AAA   |
-| WCAG 2.5.8  | AA    |
-| WCAG 3.1.1  | A     |
-| WCAG 3.1.2  | AA    |
-| WCAG 3.1.5  | AAA   |
-| WCAG 3.2.5  | AAA   |
-| WCAG 3.3.2  | A     |
-| WCAG 4.1.2  | A     |
+| Conformance | Level | Must Fix | Good to Fix | Exclusively Needs Review |
+|-------------|-------|----------|-------------|--------------|
+| WCAG 1.1.1  | A     | Yes      |             |              |
+| WCAG 1.2.2  | A     | Yes      |             |              |
+| WCAG 1.3.1  | A     | Yes      |             |              |
+| WCAG 1.3.5  | AA    | Yes      |             |              |
+| WCAG 1.4.1  | A     | Yes      |             |              |
+| WCAG 1.4.2  | A     |          | Yes         |              |
+| WCAG 1.4.3  | AA    | Yes      |             |              |
+| WCAG 1.4.4  | AA    | Yes      |             |              |
+| WCAG 1.4.6  | AAA   | Yes      |             |              |
+| WCAG 1.4.12 | AA    | Yes      |             |              |
+| WCAG 2.1.1  | A     | Yes      | Yes         |              |
+| WCAG 2.2.1  | A     | Yes      |             |              |
+| WCAG 2.2.2  | A     | Yes      |             |              |
+| WCAG 2.2.4  | AAA   |          | Yes         |              |
+| WCAG 2.4.1  | A     | Yes      |             |              |
+| WCAG 2.4.2  | A     | Yes      |             |              |
+| WCAG 2.4.4  | A     | Yes      |             |              |
+| WCAG 2.4.9  | AAA   |          | Yes         |              |
+| WCAG 2.5.8  | AA    | Yes      |             |              |
+| WCAG 3.1.1  | A     | Yes      | Yes         |              |
+| WCAG 3.1.2  | AA    | Yes      |             |              |
+| WCAG 3.1.5  | AAA   |          |             | Yes          |
+| WCAG 3.2.5  | AAA   |          | Yes         |              |
+| WCAG 3.3.2  | A     |          | Yes         |              |
+| WCAG 4.1.2  | A     | Yes      | Yes         |              |
 
 ### Summary
 | Level | Count |
