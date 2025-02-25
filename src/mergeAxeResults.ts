@@ -767,9 +767,7 @@ const writeJsonAndBase64Files = async (
   items.passed.totalRuleIssues = items.passed.rules.length;
 
   const {
-    pagesScanned,
     topTenPagesWithMostIssues,
-    pagesNotScanned,
     wcagLinks,
     wcagPassPercentage,
     totalPagesScanned,
@@ -778,10 +776,19 @@ const writeJsonAndBase64Files = async (
   } = rest;
 
   const summaryItems = {
-    ...items,
-    pagesScanned,
+    mustFix: {
+      totalItems: items.mustFix?.totalItems || 0,
+      totalRuleIssues: items.mustFix?.totalRuleIssues || 0,
+    },
+    goodToFix: {
+      totalItems: items.goodToFix?.totalItems || 0,
+      totalRuleIssues: items.goodToFix?.totalRuleIssues || 0,
+    },
+    needsReview: {
+      totalItems: items.needsReview?.totalItems || 0,
+      totalRuleIssues: items.needsReview?.totalRuleIssues || 0,
+    },
     topTenPagesWithMostIssues,
-    pagesNotScanned,
     wcagLinks,
     wcagPassPercentage,
     totalPagesScanned,
