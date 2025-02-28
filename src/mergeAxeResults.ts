@@ -1355,6 +1355,8 @@ const generateArtifacts = async (
       scanItemsBase64FilePath,
       scanItemsSummaryJsonFilePath,
       scanItemsSummaryBase64FilePath,
+      scanItemsMiniReportJsonFilePath,
+      scanItemsMiniReportBase64FilePath,
     ]);
   }
 
