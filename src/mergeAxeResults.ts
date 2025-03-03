@@ -160,14 +160,19 @@ const writeCsv = async (allIssues, storagePath) => {
       pagesAffected,
       helpUrl: learnMore,
     } = rule;
-    // we filter out the below as it represents the A/AA/AAA level, not the clause itself
+
+    // we want the wcag2a,... inside so this is commmented out
+    /*
     const clausesArr = conformance.filter(
       clause => !['wcag2a', 'wcag2aa', 'wcag2aaa'].includes(clause),
     );
-    pagesAffected.sort((a, b) => a.url.localeCompare(b.url));
-    // format clauses as a string
-    const wcagConformance = clausesArr.join(',');
+    */
 
+     // format clauses as a string
+     const wcagConformance = conformance.join(',');
+
+    pagesAffected.sort((a, b) => a.url.localeCompare(b.url));
+   
     pagesAffected.forEach(affectedPage => {
       const { url, items } = affectedPage;
       items.forEach(item => {
