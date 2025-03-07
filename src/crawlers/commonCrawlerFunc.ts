@@ -86,17 +86,17 @@ export const filterAxeResults = (
     const conformance = tags.filter(tag => tag.startsWith('wcag') || tag === 'best-practice');
 
     // handle rare cases where conformance level is not the first element
-    const levels = ['wcag2a', 'wcag2aa', 'wcag2aaa'];
-    if (conformance[0] !== 'best-practice' && !levels.includes(conformance[0])) {
-      conformance.sort((a, b) => {
-        if (levels.includes(a)) {
-          return -1;
-        }
-        if (levels.includes(b)) {
-          return 1;
-        }
+    const wcagRegex = /^wcag\d+a+$/;
 
-        return 0;
+    if (conformance[0] !== 'best-practice' && !wcagRegex.test(conformance[0])) {
+      conformance.sort((a, b) => {
+      if (wcagRegex.test(a) && !wcagRegex.test(b)) {
+        return -1;
+      }
+      if (!wcagRegex.test(a) && wcagRegex.test(b)) {
+        return 1;
+      }
+      return 0;
       });
     }
 
@@ -138,15 +138,13 @@ export const filterAxeResults = (
 
     nodes.forEach(node => {
       const { impact } = node;
-      const hasWcag2a = conformance.includes('wcag2a');
-      const hasWcag2aa = conformance.includes('wcag2aa');
-      const hasWcag2aaa = conformance.includes('wcag2aaa');
+      const hasWcagA = conformance.some(tag => /^wcag\d*a$/.test(tag));
+      const hasWcagAA = conformance.some(tag => /^wcag\d*aa$/.test(tag));
+      // const hasWcagAAA = conformance.some(tag => /^wcag\d*aaa$/.test(tag));
 
       if (displayNeedsReview) {
         addTo(needsReview, node);
-      } else if (hasWcag2aaa) {
-        addTo(goodToFix, node);
-      } else if (hasWcag2a || hasWcag2aa) {
+      } else if (hasWcagA || hasWcagAA) {
         addTo(mustFix, node);
       } else {
         addTo(goodToFix, node);
