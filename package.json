@@ -1,14 +1,14 @@
 {
   "name": "@govtechsg/oobee",
   "main": "dist/npmIndex.js",
-  "version": "0.10.37",
+  "version": "0.10.38",
   "type": "module",
   "author": "Government Technology Agency <info@tech.gov.sg>",
   "dependencies": {
     "@json2csv/node": "^7.0.3",
     "@napi-rs/canvas": "^0.1.53",
     "axe-core": "^4.10.2",
-    "axios": "^1.7.4",
+    "axios": "^1.8.2",
     "base64-stream": "^1.0.0",
     "cheerio": "^1.0.0-rc.12",
     "crawlee": "^3.11.1",
