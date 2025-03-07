@@ -84,7 +84,7 @@ verapdf --version
 | Variable Name | Description | Default |
 | ------------- | ----------- | ------- |
 | OOBEE_VERBOSE | When set to `true`, log output goes to console | `false` |
-| RUNNING_FROM_PH_GUI | Legacy, replaced by RUNNING_FROM_PH_GUI | `false` |
+| RUNNING_FROM_PH_GUI | Legacy, replaced by OOBEE_VERBOSE | `false` |
 | WARN_LEVEL | Only used in tests. |  |
 
 #### Environment variables used internally (Do not set)
