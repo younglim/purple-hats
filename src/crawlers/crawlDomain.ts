@@ -847,7 +847,7 @@ const crawlDomain = async ({
         // when max pages have been scanned, scan will abort and all relevant pages still opened will close instantly.
         // a browser close error will then be flagged. Since this is an intended behaviour, this error will be excluded.
         if (!isAbortingScanNow) {
-          urlsCrawled.error.push({ url: request.url });
+            urlsCrawled.error.push({ url: request.url, pageTitle: request.url, actualUrl: request.url });
         }
       }
     },
@@ -856,7 +856,8 @@ const crawlDomain = async ({
         numScanned: urlsCrawled.scanned.length,
         urlScanned: request.url,
       });
-      urlsCrawled.error.push({ url: request.url });
+      urlsCrawled.error.push({ url: request.url, pageTitle: request.url, actualUrl: request.url });
+    
       crawlee.log.error(`Failed Request - ${request.url}: ${request.errorMessages}`);
     },
     maxRequestsPerCrawl: Infinity,

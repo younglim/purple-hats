@@ -37,9 +37,9 @@ export type ItemsInfo = {
 export type PageInfo = {
   items?: ItemsInfo[];
   itemsCount?: number;
-  pageTitle?: string;
+  pageTitle: string;
   url: string;
-  actualUrl?: string;
+  actualUrl: string;
   pageImagePath?: string;
   pageIndex?: number;
   metadata?: string;
