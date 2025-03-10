@@ -990,53 +990,58 @@ const writeJsonAndBase64Files = async (
 
   function transformPageData(page: PageData) {
     const typesOfIssuesArray = Object.values(page.typesOfIssues);
-
-    // Summaries
-    const mustFixSum = typesOfIssuesArray.reduce(
-      (acc, r) => acc + r.occurrencesMustFix,
-      0
-    );
-    const goodToFixSum = typesOfIssuesArray.reduce(
-      (acc, r) => acc + r.occurrencesGoodToFix,
-      0
-    );
-    const needsReviewSum = typesOfIssuesArray.reduce(
-      (acc, r) => acc + r.occurrencesNeedsReview,
-      0
-    );
-
-    // Build categoriesPresent based on these sums
+  
+    // Compute sums for each failing category
+    const mustFixSum = typesOfIssuesArray.reduce((acc, r) => acc + r.occurrencesMustFix, 0);
+    const goodToFixSum = typesOfIssuesArray.reduce((acc, r) => acc + r.occurrencesGoodToFix, 0);
+    const needsReviewSum = typesOfIssuesArray.reduce((acc, r) => acc + r.occurrencesNeedsReview, 0);
+  
+    // Build categoriesPresent based on nonzero failing counts
     const categoriesPresent: string[] = [];
     if (mustFixSum > 0) categoriesPresent.push("mustFix");
     if (goodToFixSum > 0) categoriesPresent.push("goodToFix");
     if (needsReviewSum > 0) categoriesPresent.push("needsReview");
-
-    // Count how many rules have mustFix or goodToFix
+  
+    // Count how many rules have failing issues (either mustFix or goodToFix)
     const failedRuleCount = typesOfIssuesArray.filter(
-      (r) => r.occurrencesMustFix > 0 || r.occurrencesGoodToFix > 0
+      (r) => (r.occurrencesMustFix || 0) + (r.occurrencesGoodToFix || 0) > 0
     ).length;
-
+  
     const typesOfIssuesExcludingNeedsReviewCount = failedRuleCount;
     const occurrencesExclusiveToNeedsReview =
       page.totalOccurrencesFailedExcludingNeedsReview === 0 &&
       page.totalOccurrencesFailedIncludingNeedsReview > 0;
-
+  
+    // NEW: Aggregate wcag conformance values only for rules with failing issues.
+    const allConformance = typesOfIssuesArray.reduce((acc, curr) => {
+      const nonPassedCount =
+        (curr.occurrencesMustFix || 0) +
+        (curr.occurrencesGoodToFix || 0) +
+        (curr.occurrencesNeedsReview || 0);
+      // Only include if there are any failing counts.
+      if (nonPassedCount > 0) {
+        return acc.concat(curr.wagConformance || []);
+      }
+      return acc;
+    }, []);
+    // Remove duplicates.
+    const conformance = Array.from(new Set(allConformance));
+  
     return {
       pageTitle: page.pageTitle,
       url: page.url,
-      totalOccurrencesFailedIncludingNeedsReview:
-        page.totalOccurrencesFailedIncludingNeedsReview,
-      totalOccurrencesFailedExcludingNeedsReview:
-        page.totalOccurrencesFailedExcludingNeedsReview,
+      totalOccurrencesFailedIncludingNeedsReview: page.totalOccurrencesFailedIncludingNeedsReview,
+      totalOccurrencesFailedExcludingNeedsReview: page.totalOccurrencesFailedExcludingNeedsReview,
       totalOccurrencesNeedsReview: page.totalOccurrencesNeedsReview,
       totalOccurrencesPassed: page.totalOccurrencesPassed,
       occurrencesExclusiveToNeedsReview,
       typesOfIssuesCount: failedRuleCount,
       typesOfIssuesExcludingNeedsReviewCount,
       categoriesPresent,
-      typesOfIssues: typesOfIssuesArray,
+      conformance,
+      typesOfIssues: typesOfIssuesArray, // full details for scanPagesDetail
     };
-  }
+  }  
 
   const pagesAffected = pagesAffectedRaw.map(transformPageData);
   const pagesNotAffected = pagesNotAffectedRaw.map(transformPageData);
