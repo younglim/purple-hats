@@ -742,8 +742,8 @@ const writeJsonAndBase64Files = async (
   const { jsonFilePath: scanDataJsonFilePath, base64FilePath: scanDataBase64FilePath } =
     await writeJsonFileAndCompressedJsonFile(rest, storagePath, 'scanData');
   const { jsonFilePath: scanItemsJsonFilePath, base64FilePath: scanItemsBase64FilePath } =
-    await writeJsonFileAndCompressedJsonFile(items, storagePath, 'scanItems');
-    
+    await writeJsonFileAndCompressedJsonFile({ oobeeAppVersion: allIssues.oobeeAppVersion, ...items }, storagePath, 'scanItems');
+
     // Add pagesAffectedCount to each rule in scanItemsMiniReport (items) and sort them in descending order of pagesAffectedCount
     ['mustFix', 'goodToFix', 'needsReview', 'passed'].forEach((category) => {
       if (items[category].rules && Array.isArray(items[category].rules)) {
@@ -768,8 +768,8 @@ const writeJsonAndBase64Files = async (
 
     // Write out the scanIssuesSummary JSON using the new structure
     const { jsonFilePath: scanIssuesSummaryJsonFilePath, base64FilePath: scanIssuesSummaryBase64FilePath } =
-    await writeJsonFileAndCompressedJsonFile(scanIssuesSummary, storagePath, 'scanIssuesSummary');
-  
+    await writeJsonFileAndCompressedJsonFile({ oobeeAppVersion: allIssues.oobeeAppVersion, ...scanIssuesSummary }, storagePath, 'scanIssuesSummary');
+
   // scanItemsSummary
   // the below mutates the original items object, since it is expensive to clone
   items.mustFix.rules.forEach(rule => {
@@ -828,8 +828,7 @@ const writeJsonAndBase64Files = async (
   const {
     jsonFilePath: scanItemsMiniReportJsonFilePath,
     base64FilePath: scanItemsMiniReportBase64FilePath,
-  } = await writeJsonFileAndCompressedJsonFile(summaryItemsMini, storagePath, 'scanItemsSummaryMiniReport');
-
+  } = await writeJsonFileAndCompressedJsonFile({ oobeeAppVersion: allIssues.oobeeAppVersion, ...summaryItemsMini }, storagePath, 'scanItemsSummaryMiniReport');
   const summaryItems = {
     mustFix: {
       totalItems: items.mustFix?.totalItems || 0,
@@ -854,7 +853,7 @@ const writeJsonAndBase64Files = async (
   const {
     jsonFilePath: scanItemsSummaryJsonFilePath,
     base64FilePath: scanItemsSummaryBase64FilePath,
-  } = await writeJsonFileAndCompressedJsonFile(summaryItems, storagePath, 'scanItemsSummary');
+  } = await writeJsonFileAndCompressedJsonFile({ oobeeAppVersion: allIssues.oobeeAppVersion, ...summaryItems }, storagePath, 'scanItemsSummary');
 
   // -----------------------------------------------------------------------------
   // --- Scan Pages Summary and Scan Pages Detail ---
@@ -1091,20 +1090,12 @@ const writeJsonAndBase64Files = async (
   const {
     jsonFilePath: scanPagesDetailJsonFilePath,
     base64FilePath: scanPagesDetailBase64FilePath
-  } = await writeJsonFileAndCompressedJsonFile(
-    scanPagesDetail,
-    storagePath,
-    'scanPagesDetail'
-  );
+  } = await writeJsonFileAndCompressedJsonFile({ oobeeAppVersion: allIssues.oobeeAppVersion, ...scanPagesDetail }, storagePath, 'scanPagesDetail');
 
   const {
     jsonFilePath: scanPagesSummaryJsonFilePath,
     base64FilePath: scanPagesSummaryBase64FilePath
-  } = await writeJsonFileAndCompressedJsonFile(
-    scanPagesSummary,
-    storagePath,
-    'scanPagesSummary'
-  );
+  } = await writeJsonFileAndCompressedJsonFile({ oobeeAppVersion: allIssues.oobeeAppVersion, ...scanPagesSummary }, storagePath, 'scanPagesSummary');
 
   return {
     scanDataJsonFilePath,
