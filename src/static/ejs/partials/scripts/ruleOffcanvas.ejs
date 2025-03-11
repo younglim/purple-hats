@@ -113,8 +113,8 @@ category summary is clicked %>
       const comboboxCategorySelectors = [];
 
       Object.keys(filteredItems).forEach(category => {
-        const ruleInCategory = filteredItems[category].rules.find(r => r.rule === selectedRule.rule);
-
+        const ruleInCategory = filteredItems[category]?.rules?.find(r => r.rule === selectedRule.rule);
+        
         if (ruleInCategory !== undefined && category !== 'passed') {
           if (category !== 'passed') {
             availableFixCategories.push(category);
