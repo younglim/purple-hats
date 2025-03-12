@@ -150,7 +150,7 @@ const crawlLocalFile = async (
       ...playwrightDeviceDetailsObject,
     });
 
-    const page = await browserContext.newPage(););
+    const page = await browserContext.newPage();
     request.url = convertPathToLocalFile(request.url);
     await page.goto(request.url);
     const results = await runAxeScript({ includeScreenshots, page, randomToken });
