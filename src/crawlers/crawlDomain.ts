@@ -29,6 +29,7 @@ import {
   getBlackListedPatterns,
   urlWithoutAuth,
   waitForPageLoaded,
+  initModifiedUserAgent,
 } from '../constants/common.js';
 import { areLinksEqual, isFollowStrategy } from '../utils.js';
 import {
@@ -455,6 +456,8 @@ const crawlDomain = async ({
     userDataDir = process.env.CRAWLEE_HEADLESS !== '0' ? userDataDirectory : '';
   }
 
+  await initModifiedUserAgent(browser, playwrightDeviceDetailsObject);
+  
   const crawler = new crawlee.PlaywrightCrawler({
     launchContext: {
       launcher: constants.launcher,
