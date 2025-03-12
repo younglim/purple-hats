@@ -1,3 +1,6 @@
 \.*login.singpass.gov.sg\.*
 \.*auth.singpass.gov.sg\.*
 \.*form.gov.sg\.*
+\.*login.microsoftonline.com\.*
+\.*id.atlassian.com\.*
+\.*cloudflareaccess.com\.*
