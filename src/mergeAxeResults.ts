@@ -546,86 +546,93 @@ const writeLargeScanItemsJsonToFile = async (obj: object, filePath: string) => {
 
       keys.forEach((key, i) => {
         const value = obj[key];
-        queueWrite(`  "${key}": {\n`);
 
-        const { rules, ...otherProperties } = value;
-
-        // Write other properties
-        Object.entries(otherProperties).forEach(([propKey, propValue], j) => {
-          const propValueString =
-            propValue === null ||
-              typeof propValue === 'function' ||
-              typeof propValue === 'undefined'
-              ? 'null'
-              : JSON.stringify(propValue);
-          queueWrite(`    "${propKey}": ${propValueString}`);
-          if (j < Object.keys(otherProperties).length - 1 || (rules && rules.length >= 0)) {
-            queueWrite(',\n');
-          } else {
-            queueWrite('\n');
-          }
-        });
-
-        if (rules && Array.isArray(rules)) {
-          queueWrite('    "rules": [\n');
-
-          rules.forEach((rule, j) => {
-            queueWrite('      {\n');
-            const { pagesAffected, ...otherRuleProperties } = rule;
-
-            Object.entries(otherRuleProperties).forEach(([ruleKey, ruleValue], k) => {
-              const ruleValueString =
-                ruleValue === null ||
-                  typeof ruleValue === 'function' ||
-                  typeof ruleValue === 'undefined'
-                  ? 'null'
-                  : JSON.stringify(ruleValue);
-              queueWrite(`        "${ruleKey}": ${ruleValueString}`);
-              if (k < Object.keys(otherRuleProperties).length - 1 || pagesAffected) {
-                queueWrite(',\n');
-              } else {
-                queueWrite('\n');
-              }
-            });
-
-            if (pagesAffected && Array.isArray(pagesAffected)) {
-              queueWrite('        "pagesAffected": [\n');
-
-              pagesAffected.forEach((page, p) => {
-                const pageJson = JSON.stringify(page, null, 2)
-                  .split('\n')
-                  .map((line, idx) => (idx === 0 ? `          ${line}` : `          ${line}`))
-                  .join('\n');
-
-                queueWrite(pageJson);
-
-                if (p < pagesAffected.length - 1) {
-                  queueWrite(',\n');
-                } else {
-                  queueWrite('\n');
-                }
-              });
-
-              queueWrite('        ]');
-            }
-
-            queueWrite('\n      }');
-            if (j < rules.length - 1) {
+        if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+          queueWrite(`  "${key}": ${JSON.stringify(value)}`);
+        } else {
+          queueWrite(`  "${key}": {\n`);
+        
+          const { rules, ...otherProperties } = value;
+        
+          // Write other properties
+          Object.entries(otherProperties).forEach(([propKey, propValue], j) => {
+            const propValueString =
+              propValue === null ||
+                typeof propValue === 'function' ||
+                typeof propValue === 'undefined'
+                ? 'null'
+                : JSON.stringify(propValue);
+            queueWrite(`    "${propKey}": ${propValueString}`);
+            if (j < Object.keys(otherProperties).length - 1 || (rules && rules.length >= 0)) {
               queueWrite(',\n');
             } else {
               queueWrite('\n');
             }
           });
 
-          queueWrite('    ]');
-        }
+          if (rules && Array.isArray(rules)) {
+            queueWrite('    "rules": [\n');
 
-        queueWrite('\n  }');
-        if (i < keys.length - 1) {
-          queueWrite(',\n');
-        } else {
-          queueWrite('\n');
-        }
+            rules.forEach((rule, j) => {
+              queueWrite('      {\n');
+              const { pagesAffected, ...otherRuleProperties } = rule;
+
+              Object.entries(otherRuleProperties).forEach(([ruleKey, ruleValue], k) => {
+                const ruleValueString =
+                  ruleValue === null ||
+                    typeof ruleValue === 'function' ||
+                    typeof ruleValue === 'undefined'
+                    ? 'null'
+                    : JSON.stringify(ruleValue);
+                queueWrite(`        "${ruleKey}": ${ruleValueString}`);
+                if (k < Object.keys(otherRuleProperties).length - 1 || pagesAffected) {
+                  queueWrite(',\n');
+                } else {
+                  queueWrite('\n');
+                }
+              });
+
+              if (pagesAffected && Array.isArray(pagesAffected)) {
+                queueWrite('        "pagesAffected": [\n');
+
+                pagesAffected.forEach((page, p) => {
+                  const pageJson = JSON.stringify(page, null, 2)
+                    .split('\n')
+                    .map((line, idx) => (idx === 0 ? `          ${line}` : `          ${line}`))
+                    .join('\n');
+
+                  queueWrite(pageJson);
+
+                  if (p < pagesAffected.length - 1) {
+                    queueWrite(',\n');
+                  } else {
+                    queueWrite('\n');
+                  }
+                });
+
+                queueWrite('        ]');
+              }
+
+              queueWrite('\n      }');
+              if (j < rules.length - 1) {
+                queueWrite(',\n');
+              } else {
+                queueWrite('\n');
+              }
+            });
+
+            queueWrite('    ]');
+          }
+          queueWrite('\n  }');
+      }
+
+      if (i < keys.length - 1) {
+        queueWrite(',\n');
+      } else {
+        queueWrite('\n');
+      }
+
+
       });
 
       queueWrite('}\n');
