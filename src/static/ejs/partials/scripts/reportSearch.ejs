@@ -205,17 +205,18 @@
 
   function updateIssueOccurrence(category, filteredItems) {
     //update no. of issues/occurances for each category
-    let rules = filteredItems[category].rules;
+    let rules = Array.isArray(filteredItems[category]?.rules) ? filteredItems[category].rules : [];
     let totalItemsSum = rules.reduce((sum, rule) => sum + rule.totalItems, 0);
     filteredItems[category].totalItems = totalItemsSum;
     let updatedIssueOccurrence = '';
 
     // Determine the correct singular/plural form for 'issue' and 'occurrence'
-    const issueLabel = filteredItems[category].rules.length === 1 ? 'issue' : 'issues';
+    const issueLabel = Array.isArray(filteredItems[category].rules) && filteredItems[category].rules.length === 1 ? 'issue' : 'issues';
     const occurrenceLabel = filteredItems[category].totalItems === 1 ? 'occurrence' : 'occurrences';
 
     if (category !== 'passed' && filteredItems[category].totalItems !== 0) {
-      updatedIssueOccurrence = `<strong style="color: #006b8c;">${filteredItems[category].rules.length}</strong> ${issueLabel} / <strong style="color: #006b8c;">${filteredItems[category].totalItems}</strong> ${occurrenceLabel}`;
+      const rulesLength = filteredItems[category].rules ? filteredItems[category].rules.length : 0;
+      updatedIssueOccurrence = `<strong style="color: #006b8c;">${rulesLength}</strong> ${issueLabel} / <strong style="color: #006b8c;">${filteredItems[category].totalItems}</strong> ${occurrenceLabel}`;
     } else if (category !== 'passed' && filteredItems[category].totalItems === 0) {
       updatedIssueOccurrence = `<strong style="color: #006b8c;">0</strong> issues`;
     } else {
