@@ -274,7 +274,7 @@ const crawlSitemap = async (
       }
 
       const contentType = response?.headers?.()['content-type'] || '';
-      const status = response.status();
+      const status = response ? response.status() : 0;
 
       if (blacklistedPatterns && !isFollowStrategy(actualUrl, request.url, "same-hostname") && isSkippedUrl(actualUrl, blacklistedPatterns)) {
         urlsCrawled.userExcluded.push({
