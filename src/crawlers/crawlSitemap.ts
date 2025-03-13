@@ -273,7 +273,7 @@ const crawlSitemap = async (
         return;
       }
 
-      const contentType = response.headers()['content-type'];
+      const contentType = response?.headers?.()['content-type'] || '';
       const status = response.status();
 
       if (blacklistedPatterns && !isFollowStrategy(actualUrl, request.url, "same-hostname") && isSkippedUrl(actualUrl, blacklistedPatterns)) {
