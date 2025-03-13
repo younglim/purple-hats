@@ -106,17 +106,33 @@
   }
 
   function searchPages(category, filteredItems, isExactSearch, normalizedSearchVal) {
+    normalizedSearchVal = normalizedSearchVal.trim().toLowerCase();
+    const exactSearchVal = normalizedSearchVal.slice(1, -1).trim();
+
+    // Split search terms into individual words for partial matching
+    const searchWords = normalizedSearchVal.split(/\s+/);
+
     if (Array.isArray(filteredItems[category]?.rules)) {
-      // Filter pagesAffected array to only include pages with URLs that match the searchTerm
       filteredItems[category].rules = filteredItems[category].rules
         .map(item => {
           if (Array.isArray(item.pagesAffected)) {
             item.pagesAffected = item.pagesAffected.filter(page => {
               let normalizedPageUrl = page.url ? page.url.toLowerCase() : '';
-              return isExactSearch
-                ? normalizedPageUrl === normalizedSearchVal.slice(1, -1)
-                : normalizedPageUrl.includes(normalizedSearchVal);
+              let normalizedPageTitle = page.title ? page.title.toLowerCase() : '';
+
+              if (isExactSearch) {
+                return (
+                  normalizedPageUrl === exactSearchVal || 
+                  normalizedPageTitle === exactSearchVal
+                );
+              } else {
+                // Check each word separately for partial search
+                return searchWords.every(word => 
+                  normalizedPageUrl.includes(word) || normalizedPageTitle.includes(word)
+                );
+              }
             });
+
             item.totalItems = item.pagesAffected.reduce(
               (sum, page) => sum + (Array.isArray(page.items) ? page.items.length : 0),
               0,
@@ -128,12 +144,12 @@
           return item;
         })
         .filter(item => item.pagesAffected.length > 0);
-      // Update the totalItems value for the category
+
       filteredItems[category].totalItems = filteredItems[category].rules.reduce(
         (sum, rule) => sum + rule.totalItems,
         0,
       );
-      } else {
+    } else {
       filteredItems[category].rules = [];
       filteredItems[category].totalItems = 0;
     }
