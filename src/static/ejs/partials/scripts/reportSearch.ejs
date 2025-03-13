@@ -89,12 +89,13 @@
     } else if (currentlyClickedButton.id === 'htmlButton') {
       searchHtml(category, filteredItems, isExactSearch, normalizedSearchVal);
     }
+
     updateIssueOccurrence(category, filteredItems);
   }
 
   function searchIssueDescription(category, filteredItems, isExactSearch, normalizedSearchVal) {
     filteredItems[category].rules = filteredItems[category].rules.filter(item => {
-      let normalizedDescription = item.description.toLowerCase();
+      let normalizedDescription = item.description ? item.description.toLowerCase() : '';
       return isExactSearch
         ? normalizedDescription === normalizedSearchVal.slice(1, -1)
         : normalizedDescription.includes(normalizedSearchVal);
@@ -102,12 +103,11 @@
   }
 
   function searchPages(category, filteredItems, isExactSearch, normalizedSearchVal) {
-    // Filter pagesAffected array to only include pages with URLs that match the searchTerm
     filteredItems[category].rules = filteredItems[category].rules
       .map(item => {
         if (Array.isArray(item.pagesAffected)) {
           item.pagesAffected = item.pagesAffected.filter(page => {
-            let normalizedPageUrl = page.url.toLowerCase();
+            let normalizedPageUrl = page.url ? page.url.toLowerCase() : '';
             return isExactSearch
               ? normalizedPageUrl === normalizedSearchVal.slice(1, -1)
               : normalizedPageUrl.includes(normalizedSearchVal);
@@ -123,7 +123,7 @@
         return item;
       })
       .filter(item => item.pagesAffected.length > 0);
-    // Update the totalItems value for the category
+
     filteredItems[category].totalItems = filteredItems[category].rules.reduce(
       (sum, rule) => sum + rule.totalItems,
       0,
@@ -138,20 +138,20 @@
           // Update items array to only include items with xpath or html starting with searchVal
           page.items = Array.isArray(page.items)
             ? page.items.filter(item => {
-                let normalizedHtml = item.html.replace(/\s+/g, '').toLowerCase();
-                let normalizedXpath = item.xpath.replace(/\s+/g, '').toLowerCase();
-                let filterHtml;
-                if (isExactSearch) {
-                  filterHtml =
-                    normalizedXpath === normalizedSearchVal.slice(1, -1) ||
-                    normalizedHtml === normalizedSearchVal.slice(1, -1);
-                } else {
-                  filterHtml =
-                    normalizedXpath.includes(normalizedSearchVal) ||
-                    normalizedHtml.includes(normalizedSearchVal);
-                }
-                return filterHtml;
-              })
+              let normalizedHtml = item.html ? item.html.replace(/\s+/g, '').toLowerCase();
+              let normalizedXpath = item.xpath ? item.xpath.replace(/\s+/g, '').toLowerCase();
+              let filterHtml;
+              if (isExactSearch) {
+                filterHtml =
+                  normalizedXpath === normalizedSearchVal.slice(1, -1) ||
+                  normalizedHtml === normalizedSearchVal.slice(1, -1);
+              } else {
+                filterHtml =
+                  normalizedXpath.includes(normalizedSearchVal) ||
+                  normalizedHtml.includes(normalizedSearchVal);
+              }
+              return filterHtml;
+            })
             : [];
         });
         // Update totalItems to be the sum of the number of elements in the items array
