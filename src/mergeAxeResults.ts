@@ -241,7 +241,7 @@ const writeCsv = async (allIssues, storagePath) => {
           issueId: 'error-pages-skipped',
           issueDescription: 'Page was skipped during the scan',
           wcagConformance: '',
-          url: page.url || '',
+          url: page.url || page || '',
           pageTitle: 'Error',
           context: '',
           howToFix: '',

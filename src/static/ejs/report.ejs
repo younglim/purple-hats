@@ -298,7 +298,7 @@
 
           pagesNotScanned.forEach((page, index) => {
             var listItem = document.createElement('li');
-            listItem.innerHTML = `<a class="not-scanned-url" href="${page.url}" target="_blank">${page.url}</a>`;
+            listItem.innerHTML = `<a class="not-scanned-url" href="${page.url || page }" target="_blank">${page.url || page }</a>`;
             pagesNotScannedList.appendChild(listItem);
           });
         }
