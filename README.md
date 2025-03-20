@@ -397,6 +397,8 @@ Examples:
   > [ -d <device> | -w <viewport_width> ]
 
 ```
+### Note on Windows PowerShell:
+You need to run the command as `npm run cli -- --` (with the extra set of `--`) as PowerShell inteprets arguments differently.
 
 ### Device Options
 
