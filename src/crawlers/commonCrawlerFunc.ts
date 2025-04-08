@@ -69,6 +69,30 @@ type FilteredResults = {
   actualUrl?: string;
 };
 
+const truncateHtml = (html: string, maxBytes = 5120, suffix = '…'): string => {
+  const encoder = new TextEncoder();
+  if (encoder.encode(html).length <= maxBytes) return html;
+
+  let left = 0;
+  let right = html.length;
+  let result = '';
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const truncated = html.slice(0, mid) + suffix;
+    const bytes = encoder.encode(truncated).length;
+
+    if (bytes <= maxBytes) {
+      result = truncated;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  return result;
+};
+
 export const filterAxeResults = (
   results: AxeResultsWithScreenshot,
   pageTitle: string,
@@ -124,6 +148,7 @@ export const filterAxeResults = (
       if (html.includes('</script>')) {
         finalHtml = html.replaceAll('</script>', '&lt;/script>');
       }
+      finalHtml = truncateHtml(finalHtml);
 
       const xpath = target.length === 1 && typeof target[0] === 'string' ? target[0] : null;
 
@@ -178,7 +203,10 @@ export const filterAxeResults = (
           items: [],
         };
       }
-      passed.rules[rule].items.push({ html, screenshotPath: '', message: '', xpath: '' });
+      
+      const finalHtml = truncateHtml(html);
+      passed.rules[rule].items.push({ html: finalHtml, screenshotPath: '', message: '', xpath: '' });
+
       passed.totalItems += 1;
       passed.rules[rule].totalItems += 1;
       totalItems += 1;
