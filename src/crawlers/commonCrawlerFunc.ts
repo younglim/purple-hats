@@ -69,7 +69,7 @@ type FilteredResults = {
   actualUrl?: string;
 };
 
-const truncateHtml = (html: string, maxBytes = 5120, suffix = '…'): string => {
+const truncateHtml = (html: string, maxBytes = 1024, suffix = '…'): string => {
   const encoder = new TextEncoder();
   if (encoder.encode(html).length <= maxBytes) return html;
 
