@@ -1383,22 +1383,28 @@ function populateScanPagesDetail(allIssues: AllIssues): void {
     if (needsReviewSum > 0) categoriesPresent.push("needsReview");
 
     // Count how many rules have failing issues
-    const failedRuleCount = typesOfIssuesArray.filter(
-      r =>
-      (r.occurrencesMustFix || 0) +
-      (r.occurrencesGoodToFix || 0) +
-      (r.occurrencesNeedsReview || 0) > 0
-    ).length;
+    const failedRuleIds = new Set<string>();
+    typesOfIssuesArray.forEach(r => {
+      if ((r.occurrencesMustFix || 0) > 0 ||
+          (r.occurrencesGoodToFix || 0) > 0 ||
+          (r.occurrencesNeedsReview || 0) > 0) {
+        failedRuleIds.add(r.ruleId); // Ensure ruleId is unique
+      }
+    });
+    const failedRuleCount = failedRuleIds.size;
 
-    // Possibly these two for convenience
+    // Possibly these two for future convenience
     const typesOfIssuesExcludingNeedsReviewCount = typesOfIssuesArray.filter(
       r => (r.occurrencesMustFix || 0) + (r.occurrencesGoodToFix || 0) > 0
     ).length;
 
-    const occurrencesExclusiveToNeedsReview =
-      page.totalOccurrencesFailedExcludingNeedsReview === 0 &&
-      page.totalOccurrencesFailedIncludingNeedsReview > 0;
-
+    const occurrencesExclusiveToNeedsReview = typesOfIssuesArray.filter(
+      r =>
+        (r.occurrencesNeedsReview || 0) > 0 &&
+        (r.occurrencesMustFix || 0) === 0 &&
+        (r.occurrencesGoodToFix || 0) === 0
+    ).length;
+    
     // Aggregate wcagConformance for rules that actually fail
     const allConformance = typesOfIssuesArray.reduce((acc, curr) => {
       const nonPassedCount =
