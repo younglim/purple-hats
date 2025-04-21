@@ -213,7 +213,7 @@ This file contains a summary of pages affected by accessibility issues.
       "totalOccurrencesGoodToFix": <number>,
       "totalOccurrencesNeedsReview": <number>,
       "totalOccurrencesPassed": <number>,
-      "occurrencesExclusiveToNeedsReview": <boolean>,
+      "typesOfIssuesExclusiveToNeedsReview": <boolean>,
       "typesOfIssuesCount": <number>,
       "typesOfIssuesExcludingNeedsReviewCount": <number>,
       "categoriesPresent": ["<string>", "<string>"],
@@ -261,7 +261,7 @@ This file contains a summary of pages affected by accessibility issues.
 | `totalOccurrencesGoodToFix` | Number of good-to-fix occurrences of the rule. |
 | `totalOccurrencesNeedsReview` | Number of occurrences requiring review. |
 | `totalOccurrencesPassed` | Number of times the rule was checked and passed. |
-| `occurrencesExclusiveToNeedsReview` | Boolean indicating whether the page has only needs-review issues. |
+| `typesOfIssuesExclusiveToNeedsReview` | Number of unique needs-review issues found on the page. |
 | `typesOfIssuesCount` | Number of unique issue types found on the page. |
 | `typesOfIssuesExcludingNeedsReviewCount` | Number of unique issue types found on the page, excluding needs-review issues. |
 | `categoriesPresent` | List of issue categories found on the page. |
