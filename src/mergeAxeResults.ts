@@ -1384,11 +1384,17 @@ function populateScanPagesDetail(allIssues: AllIssues): void {
 
     // Count how many rules have failing issues
     const failedRuleCount = typesOfIssuesArray.filter(
-      r => (r.occurrencesMustFix || 0) + (r.occurrencesGoodToFix || 0) > 0
+      r =>
+      (r.occurrencesMustFix || 0) +
+      (r.occurrencesGoodToFix || 0) +
+      (r.occurrencesNeedsReview || 0) > 0
     ).length;
 
     // Possibly these two for convenience
-    const typesOfIssuesExcludingNeedsReviewCount = failedRuleCount;
+    const typesOfIssuesExcludingNeedsReviewCount = typesOfIssuesArray.filter(
+      r => (r.occurrencesMustFix || 0) + (r.occurrencesGoodToFix || 0) > 0
+    ).length;
+
     const occurrencesExclusiveToNeedsReview =
       page.totalOccurrencesFailedExcludingNeedsReview === 0 &&
       page.totalOccurrencesFailedIncludingNeedsReview > 0;
