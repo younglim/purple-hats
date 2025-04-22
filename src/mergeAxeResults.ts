@@ -1398,7 +1398,7 @@ function populateScanPagesDetail(allIssues: AllIssues): void {
       r => (r.occurrencesMustFix || 0) + (r.occurrencesGoodToFix || 0) > 0
     ).length;
 
-    const typesOfIssuesExclusiveToNeedsReview = typesOfIssuesArray.filter(
+    const typesOfIssuesExclusiveToNeedsReviewCount = typesOfIssuesArray.filter(
       r =>
         (r.occurrencesNeedsReview || 0) > 0 &&
         (r.occurrencesMustFix || 0) === 0 &&
@@ -1429,7 +1429,7 @@ function populateScanPagesDetail(allIssues: AllIssues): void {
       totalOccurrencesGoodToFix: goodToFixSum,
       totalOccurrencesNeedsReview: needsReviewSum,
       totalOccurrencesPassed: page.totalOccurrencesPassed,
-      typesOfIssuesExclusiveToNeedsReview,
+      typesOfIssuesExclusiveToNeedsReviewCount,
       typesOfIssuesCount: failedRuleCount,
       typesOfIssuesExcludingNeedsReviewCount,
       categoriesPresent,
