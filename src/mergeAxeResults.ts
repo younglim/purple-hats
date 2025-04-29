@@ -791,25 +791,21 @@ const writeJsonAndBase64Files = async (
   items.mustFix.rules.forEach(rule => {
     rule.pagesAffected.forEach(page => {
       page.itemsCount = page.items.length;
-      page.items = [];
     });
   });
   items.goodToFix.rules.forEach(rule => {
     rule.pagesAffected.forEach(page => {
       page.itemsCount = page.items.length;
-      page.items = [];
     });
   });
   items.needsReview.rules.forEach(rule => {
     rule.pagesAffected.forEach(page => {
       page.itemsCount = page.items.length;
-      page.items = [];
     });
   });
   items.passed.rules.forEach(rule => {
     rule.pagesAffected.forEach(page => {
       page.itemsCount = page.items.length;
-      page.items = [];
     });
   });
 
@@ -1205,6 +1201,7 @@ const createRuleIdJson = allIssues => {
         });
       });
       snippets = [...snippetsSet];
+      rule.pagesAffected.forEach(p => { delete p.items; });
     }
     compiledRuleJson[ruleId] = {
       snippets,
