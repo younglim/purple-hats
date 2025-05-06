@@ -1,4 +1,4 @@
-import crawlee, { CrawlingContext, PlaywrightGotoOptions } from 'crawlee';
+import crawlee, { CrawlingContext, PlaywrightGotoOptions, Request } from 'crawlee';
 import axe, { AxeResults, ImpactValue, NodeResult, Result, resultGroups, TagValue } from 'axe-core';
 import { BrowserContext, Page } from 'playwright';
 import {
@@ -18,7 +18,7 @@ import { framesCheck } from './custom/framesCheck.js';
 import { findElementByCssSelector } from './custom/findElementByCssSelector.js';
 import { getAxeConfiguration } from './custom/getAxeConfiguration.js';
 import { flagUnlabelledClickableElements } from './custom/flagUnlabelledClickableElements.js';
-import { xPathToCss } from './custom/xPathToCss.js';
+import xPathToCss from './custom/xPathToCss.js';
 
 // types
 interface AxeResultsWithScreenshot extends AxeResults {
@@ -118,13 +118,13 @@ export const filterAxeResults = (
 
     if (conformance[0] !== 'best-practice' && !wcagRegex.test(conformance[0])) {
       conformance.sort((a, b) => {
-      if (wcagRegex.test(a) && !wcagRegex.test(b)) {
-        return -1;
-      }
-      if (!wcagRegex.test(a) && wcagRegex.test(b)) {
-        return 1;
-      }
-      return 0;
+        if (wcagRegex.test(a) && !wcagRegex.test(b)) {
+          return -1;
+        }
+        if (!wcagRegex.test(a) && wcagRegex.test(b)) {
+          return 1;
+        }
+        return 0;
       });
     }
 
@@ -166,7 +166,6 @@ export const filterAxeResults = (
     };
 
     nodes.forEach(node => {
-      const { impact } = node;
       const hasWcagA = conformance.some(tag => /^wcag\d*a$/.test(tag));
       const hasWcagAA = conformance.some(tag => /^wcag\d*aa$/.test(tag));
       // const hasWcagAAA = conformance.some(tag => /^wcag\d*aaa$/.test(tag));
@@ -255,7 +254,7 @@ export const runAxeScript = async ({
         let mutationCount = 0;
         const MAX_MUTATIONS = 250;
         const MAX_SAME_MUTATION_LIMIT = 10;
-        const mutationHash = {};
+        const mutationHash: Record<string, number> = {};
 
         const observer = new MutationObserver(mutationsList => {
           clearTimeout(timeout);
@@ -399,7 +398,7 @@ export const runAxeScript = async ({
               help: 'Clickable elements (i.e. elements with mouse-click interaction) must have accessible labels.',
               helpUrl: 'https://www.deque.com/blog/accessible-aria-buttons',
               nodes: escapedCssSelectors
-                .map(cssSelector => ({
+                .map((cssSelector: string): NodeResult => ({
                   html: findElementByCssSelector(cssSelector),
                   target: [cssSelector],
                   impact: 'serious' as ImpactValue,
@@ -443,8 +442,7 @@ export const runAxeScript = async ({
       framesCheckFunctionString: framesCheck.toString(),
       findElementByCssSelectorFunctionString: findElementByCssSelector.toString(),
       getAxeConfigurationFunctionString: getAxeConfiguration.toString(),
-      flagUnlabelledClickableElementsFunctionString:
-        flagUnlabelledClickableElements.toString(),
+      flagUnlabelledClickableElementsFunctionString: flagUnlabelledClickableElements.toString(),
       xPathToCssFunctionString: xPathToCss.toString(),
     },
   );
@@ -495,7 +493,7 @@ export const postNavigationHooks = [
   },
 ];
 
-export const failedRequestHandler = async ({ request }) => {
+export const failedRequestHandler = async ({ request }: { request: Request }) => {
   guiInfoLog(guiInfoStatusTypes.ERROR, { numScanned: 0, urlScanned: request.url });
   crawlee.log.error(`Failed Request - ${request.url}: ${request.errorMessages}`);
 };
