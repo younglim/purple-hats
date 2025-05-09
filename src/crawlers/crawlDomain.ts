@@ -18,6 +18,7 @@ import constants, {
   guiInfoStatusTypes,
   cssQuerySelectors,
   RuleFlags,
+  STATUS_CODE_METADATA,
 } from '../constants/constants.js';
 import {
   getPlaywrightLaunchOptions,
@@ -164,8 +165,8 @@ const crawlDomain = async ({
   const httpHeadCache = new Map<string, boolean>();
   const isProcessibleUrl = async (url: string): Promise<boolean> => {
     if (httpHeadCache.has(url)) {
-      silentLogger.info('cache hit', url, httpHeadCache.get(url));
-      return false; // return false to avoid processing the url again
+      silentLogger.info(`Skipping request as URL has been processed before ${url}}`);
+      return false; // return false to avoid processing the same url again
     }
 
     try {
@@ -485,58 +486,37 @@ const crawlDomain = async ({
 
         await page.evaluate(() => {
           return new Promise(resolve => {
-            let timeout: NodeJS.Timeout;
+            let timeout;
             let mutationCount = 0;
-            const MAX_MUTATIONS = 250;
-            const MAX_SAME_MUTATION_LIMIT = 10;
-            const mutationHash: Record<string, number> = {};
-
-            const observer = new MutationObserver(mutationsList => {
+            const MAX_MUTATIONS     = 250;   // stop if things never quiet down
+            const OBSERVER_TIMEOUT  = 5000;  // hard cap on total wait
+    
+            const observer = new MutationObserver(() => {
               clearTimeout(timeout);
-
-              mutationCount += 1;
-
+    
+              mutationCount++;
               if (mutationCount > MAX_MUTATIONS) {
                 observer.disconnect();
-                resolve('Too many mutations detected');
+                resolve('Too many mutations, exiting.');
+                return;
               }
-
-              // To handle scenario where DOM elements are constantly changing and unable to exit
-              mutationsList.forEach(mutation => {
-                let mutationKey;
-
-                if (mutation.target instanceof Element) {
-                  Array.from(mutation.target.attributes).forEach(attr => {
-                    mutationKey = `${mutation.target.nodeName}-${attr.name}`;
-
-                    if (mutationKey) {
-                      if (!mutationHash[mutationKey]) {
-                        mutationHash[mutationKey] = 1;
-                      } else {
-                        mutationHash[mutationKey]++;
-                      }
-
-                      if (mutationHash[mutationKey] >= MAX_SAME_MUTATION_LIMIT) {
-                        observer.disconnect();
-                        resolve(`Repeated mutation detected for ${mutationKey}`);
-                      }
-                    }
-                  });
-                }
-              });
-
+    
+              // restart quiet‑period timer
               timeout = setTimeout(() => {
                 observer.disconnect();
-                resolve('DOM stabilized after mutations.');
+                resolve('DOM stabilized.');
               }, 1000);
             });
-
+    
+            // overall timeout in case the page never settles
             timeout = setTimeout(() => {
               observer.disconnect();
-              resolve('No mutations detected, exit from idle state');
-            }, 1000);
-
-            observer.observe(document, { childList: true, subtree: true, attributes: true });
+              resolve('Observer timeout reached.');
+            }, OBSERVER_TIMEOUT);
+    
+            // **HERE**: select the real DOM node inside evaluate
+            const root = document.documentElement;
+            observer.observe(root, { childList: true, subtree: true });
           });
         });
 
@@ -638,10 +618,12 @@ const crawlDomain = async ({
               numScanned: urlsCrawled.scanned.length,
               urlScanned: request.url,
             });
-            urlsCrawled.blacklisted.push({
+            urlsCrawled.userExcluded.push({
               url: request.url,
               pageTitle: request.url,
-              actualUrl: actualUrl, // i.e. actualUrl
+              actualUrl: request.url, // because about:blank is not useful
+              metadata: STATUS_CODE_METADATA[1],
+              httpStatusCode: 0,
             });
 
             return;
@@ -663,10 +645,12 @@ const crawlDomain = async ({
             numScanned: urlsCrawled.scanned.length,
             urlScanned: request.url,
           });
-          urlsCrawled.blacklisted.push({
+          urlsCrawled.userExcluded.push({
             url: request.url,
             pageTitle: request.url,
-            actualUrl: actualUrl, // i.e. actualUrl
+            actualUrl: actualUrl, // because about:blank is not useful
+            metadata: STATUS_CODE_METADATA[1],
+            httpStatusCode: 0,
           });
 
           return;
@@ -677,38 +661,16 @@ const crawlDomain = async ({
             url: request.url,
             pageTitle: request.url,
             actualUrl: actualUrl,
+            metadata: STATUS_CODE_METADATA[0],
+            httpStatusCode: 0,
+          });
+          
+          guiInfoLog(guiInfoStatusTypes.SKIPPED, {
+            numScanned: urlsCrawled.scanned.length,
+            urlScanned: request.url,
           });
 
           await enqueueProcess(page, enqueueLinks, browserContext);
-          return;
-        }
-
-        if (response && response.status() === 403) {
-          guiInfoLog(guiInfoStatusTypes.SKIPPED, {
-            numScanned: urlsCrawled.scanned.length,
-            urlScanned: request.url,
-          });
-          urlsCrawled.forbidden.push({
-            url: request.url,
-            pageTitle: request.url,
-            actualUrl: actualUrl, // i.e. actualUrl
-          });
-
-          return;
-        }
-
-        if (response && response.status() !== 200) {
-
-          guiInfoLog(guiInfoStatusTypes.SKIPPED, {
-            numScanned: urlsCrawled.scanned.length,
-            urlScanned: request.url,
-          });
-          urlsCrawled.invalid.push({
-            url: request.url,
-            pageTitle: request.url,
-            actualUrl: actualUrl, // i.e. actualUrl
-          });
-
           return;
         }
 
@@ -729,6 +691,22 @@ const crawlDomain = async ({
             });
             return;
           }
+
+          const responseStatus = response?.status();
+            if (responseStatus && responseStatus >= 300) {
+            guiInfoLog(guiInfoStatusTypes.SKIPPED, {
+              numScanned: urlsCrawled.scanned.length,
+              urlScanned: request.url,
+            });
+            urlsCrawled.userExcluded.push({
+              url: request.url,
+              pageTitle: request.url,
+              actualUrl,
+              metadata: STATUS_CODE_METADATA[responseStatus] || STATUS_CODE_METADATA[599],
+              httpStatusCode: responseStatus,
+            });
+            return;
+            }
 
           const results = await runAxeScript({ includeScreenshots, page, randomToken, ruleset });
 
@@ -787,10 +765,12 @@ const crawlDomain = async ({
             numScanned: urlsCrawled.scanned.length,
             urlScanned: request.url,
           });
-          urlsCrawled.blacklisted.push({
+          urlsCrawled.userExcluded.push({
             url: request.url,
             pageTitle: request.url,
-            actualUrl: actualUrl, // i.e. actualUrl
+            actualUrl: actualUrl, // because about:blank is not useful
+            metadata: STATUS_CODE_METADATA[1],
+            httpStatusCode: 0,
           });
 
         }
@@ -830,18 +810,39 @@ const crawlDomain = async ({
         // when max pages have been scanned, scan will abort and all relevant pages still opened will close instantly.
         // a browser close error will then be flagged. Since this is an intended behaviour, this error will be excluded.
         if (!isAbortingScanNow) {
-            urlsCrawled.error.push({ url: request.url, pageTitle: request.url, actualUrl: request.url });
+          guiInfoLog(guiInfoStatusTypes.ERROR, {
+            numScanned: urlsCrawled.scanned.length,
+            urlScanned: request.url,
+          });
+
+          urlsCrawled.error.push({ 
+            url: request.url, 
+            pageTitle: request.url, 
+            actualUrl: request.url, 
+            metadata: STATUS_CODE_METADATA[2] 
+          });
         }
       }
     },
-    failedRequestHandler: async ({ request }) => {
+    failedRequestHandler: async ({ request, response }) => {
       guiInfoLog(guiInfoStatusTypes.ERROR, {
         numScanned: urlsCrawled.scanned.length,
         urlScanned: request.url,
       });
-      urlsCrawled.error.push({ url: request.url, pageTitle: request.url, actualUrl: request.url });
-    
-      crawlee.log.error(`Failed Request - ${request.url}: ${request.errorMessages}`);
+
+      const status = response?.status();
+      const metadata = typeof status === 'number'
+      ? (STATUS_CODE_METADATA[status] || STATUS_CODE_METADATA[599])
+      : STATUS_CODE_METADATA[2];
+
+      urlsCrawled.error.push({
+        url: request.url,
+        pageTitle: request.url,
+        actualUrl: request.url,
+        metadata,
+        httpStatusCode: typeof status === 'number' ? status : 0,
+      });
+
     },
     maxRequestsPerCrawl: Infinity,
     maxConcurrency: specifiedMaxConcurrency || maxConcurrency,

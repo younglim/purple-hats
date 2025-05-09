@@ -45,6 +45,7 @@ export type PageInfo = {
   pageImagePath?: string;
   pageIndex?: number;
   metadata?: string;
+  httpStatusCode?: number;
 };
 
 export type RuleInfo = {
@@ -248,7 +249,7 @@ const writeCsv = async (allIssues, storagePath) => {
           scanCompletedAt: allIssues.endTime ? allIssues.endTime.toISOString() : '',
           severity: 'error',
           issueId: 'error-pages-skipped',
-          issueDescription: 'Page was skipped during the scan',
+          issueDescription: page.metadata ? page.metadata : 'An unknown error caused the page to be skipped',
           wcagConformance: '',
           url: page.url || page || '',
           pageTitle: 'Error',
