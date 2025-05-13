@@ -12,8 +12,10 @@ import { AsyncParser, ParserOptions } from '@json2csv/node';
 import zlib from 'zlib';
 import { Base64Encode } from 'base64-stream';
 import { pipeline } from 'stream/promises';
-import constants, { ScannerTypes } from './constants/constants.js';
+import constants, { ScannerTypes, sentryConfig } from './constants/constants.js';
 import { urlWithoutAuth } from './constants/common.js';
+// @ts-ignore
+import * as Sentry from '@sentry/node';
 import {
   createScreenshotsFolder,
   getStoragePath,
@@ -23,6 +25,7 @@ import {
   retryFunction,
   zipResults,
   getIssuesPercentage,
+  getWcagCriteriaMap,
 } from './utils.js';
 import { consoleLogger, silentLogger } from './logs.js';
 import itemTypeDescription from './constants/itemTypeDescription.js';
@@ -231,7 +234,7 @@ const writeCsv = async (allIssues, storagePath) => {
     includeEmptyRows: true,
   };
 
-  // Create the parse stream (it’s asynchronous)
+  // Create the parse stream (it's asynchronous)
   const parser = new AsyncParser(opts);
   const parseStream = parser.parse(allIssues);
 
@@ -985,6 +988,21 @@ const writeSummaryPdf = async (storagePath: string, pagesScanned: number, filena
   }
 };
 
+// Tracking WCAG occurrences 
+const wcagOccurrencesMap = new Map<string, number>();
+
+// Format WCAG tag in requested format: wcag111a_Occurrences
+const formatWcagTag = async (wcagId: string): Promise<string | null> => {
+  // Get dynamic WCAG criteria map
+  const wcagCriteriaMap = await getWcagCriteriaMap();
+  
+  if (wcagCriteriaMap[wcagId]) {
+    const { level } = wcagCriteriaMap[wcagId];
+    return `${wcagId}${level}_Occurrences`;
+  }
+  return null;
+};
+
 const pushResults = async (pageResults, allIssues, isCustomFlow) => {
   const { url, pageTitle, filePath } = pageResults;
 
@@ -1036,6 +1054,10 @@ const pushResults = async (pageResults, allIssues, isCustomFlow) => {
             if (!allIssues.wcagViolations.includes(c)) {
               allIssues.wcagViolations.push(c);
             }
+            
+            // Track WCAG criteria occurrences for Sentry
+            const currentCount = wcagOccurrencesMap.get(c) || 0;
+            wcagOccurrencesMap.set(c, currentCount + count);
           });
       }
 
@@ -1490,6 +1512,90 @@ function populateScanPagesDetail(allIssues: AllIssues): void {
   };
 }
 
+// Send WCAG criteria breakdown to Sentry
+const sendWcagBreakdownToSentry = async (
+  wcagBreakdown: Map<string, number>,
+  scanInfo: {
+    entryUrl: string;
+    scanType: string;
+    browser: string;
+    email?: string;
+    name?: string;
+  }
+) => {
+  try {
+    // Initialize Sentry
+    Sentry.init(sentryConfig);
+    
+    console.log('Sending WCAG criteria breakdown to Sentry...');
+    
+    // Prepare tags for the event
+    const tags: Record<string, string> = {};
+    const wcagCriteriaBreakdown: Record<string, number> = {};
+    
+    // Get dynamic WCAG criteria map once
+    const wcagCriteriaMap = await getWcagCriteriaMap();
+    
+    // First ensure all WCAG criteria are included in the tags with a value of 0
+    // This ensures criteria with no violations are still reported
+    for (const [wcagId, info] of Object.entries(wcagCriteriaMap)) {
+      const formattedTag = await formatWcagTag(wcagId);
+      if (formattedTag) {
+        // Initialize with zero
+        tags[formattedTag] = '0';
+        wcagCriteriaBreakdown[formattedTag] = 0;
+      }
+    }
+    
+    // Now override with actual counts from the scan
+    for (const [wcagId, count] of wcagBreakdown.entries()) {
+      const formattedTag = await formatWcagTag(wcagId);
+      if (formattedTag) {
+        // Add as a tag with the count as value
+        tags[formattedTag] = String(count);
+        
+        // Store in breakdown object for the extra data
+        wcagCriteriaBreakdown[formattedTag] = count;
+      }
+    }
+    
+    // Calculate the WCAG passing percentage
+    const totalCriteria = Object.keys(wcagCriteriaMap).length;
+    const violatedCriteria = wcagBreakdown.size;
+    const passingPercentage = Math.round(((totalCriteria - violatedCriteria) / totalCriteria) * 100);
+    
+    // Add the percentage as a tag
+    tags['WCAG-Percentage-Passed'] = String(passingPercentage);
+    
+    // Send the event to Sentry
+    await Sentry.captureEvent({
+      message: `WCAG Accessibility Scan Results for ${scanInfo.entryUrl}`,
+      level: 'info',
+      tags: {
+        ...tags,
+        event_type: 'accessibility_scan',
+        scanType: scanInfo.scanType,
+        browser: scanInfo.browser,
+      },
+      user: scanInfo.email && scanInfo.name ? {
+        email: scanInfo.email,
+        username: scanInfo.name
+      } : undefined,
+      extra: {
+        entryUrl: scanInfo.entryUrl,
+        wcagBreakdown: wcagCriteriaBreakdown,
+        wcagPassPercentage: passingPercentage
+      }
+    });
+    
+    // Wait for events to be sent
+    await Sentry.flush(2000);
+    console.log('WCAG criteria breakdown sent to Sentry successfully');
+  } catch (error) {
+    console.error('Error sending WCAG breakdown to Sentry:', error);
+  }
+};
+
 const generateArtifacts = async (
   randomToken: string,
   urlScanned: string,
@@ -1512,6 +1618,7 @@ const generateArtifacts = async (
     isEnableWcagAaa: string[];
     isSlowScanMode: number;
     isAdhereRobots: boolean;
+    nameEmail?: { name: string; email: string };
   },
   zip: string = undefined, // optional
   generateJsonFiles = false,
@@ -1805,6 +1912,23 @@ const generateArtifacts = async (
     .catch(error => {
       printMessage([`Error in zipping results: ${error}`]);
     });
+
+  // At the end of the function where results are generated, add:
+  try {
+    // Always send WCAG breakdown to Sentry, even if no violations were found
+    // This ensures that all criteria are reported, including those with 0 occurrences
+    await sendWcagBreakdownToSentry(wcagOccurrencesMap, {
+      entryUrl: urlScanned,
+      scanType: scanType,
+      browser: scanDetails.deviceChosen,
+      ...(scanDetails.nameEmail && {
+        email: scanDetails.nameEmail.email,
+        name: scanDetails.nameEmail.name
+      })
+    });
+  } catch (error) {
+    console.error('Error sending WCAG data to Sentry:', error);
+  }
 
   return createRuleIdJson(allIssues);
 };
