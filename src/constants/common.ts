@@ -1831,7 +1831,6 @@ export const submitForm = async (
     // IMPORTANT: Wait for the event to be sent
     await Sentry.flush(2000); // Wait up to 2 seconds for the event to be sent
     
-    console.log('Scan data sent to Sentry successfully');
   } catch (error) {
     console.error('Error sending data to Sentry:', error);
   }

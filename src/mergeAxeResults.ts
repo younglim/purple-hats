@@ -1526,9 +1526,7 @@ const sendWcagBreakdownToSentry = async (
   try {
     // Initialize Sentry
     Sentry.init(sentryConfig);
-    
-    console.log('Sending WCAG criteria breakdown to Sentry...');
-    
+
     // Prepare tags for the event
     const tags: Record<string, string> = {};
     const wcagCriteriaBreakdown: Record<string, number> = {};
@@ -1590,7 +1588,6 @@ const sendWcagBreakdownToSentry = async (
     
     // Wait for events to be sent
     await Sentry.flush(2000);
-    console.log('WCAG criteria breakdown sent to Sentry successfully');
   } catch (error) {
     console.error('Error sending WCAG breakdown to Sentry:', error);
   }
