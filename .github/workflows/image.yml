@@ -44,7 +44,11 @@ jobs:
             oobee-portable-windows.zip
 
   mac-install-oobee:
-    runs-on: self-hosted
+    runs-on: macos-latest
+    env:
+      CER_B64:     ${{ secrets.ORG_DEVELOPER_ID_APPLICATION_CERT_CER }}
+      P12_B64:     ${{ secrets.ORG_DEVELOPER_ID_APPLICATION_PRIVATEKEY_P12 }}
+      P12_PASSWORD: ${{ secrets.ORG_DEVELOPER_ID_APPLICATION_PRIVATEKEY_P12_PASSWORD }}
     environment: macos
 
     steps:
@@ -70,6 +74,51 @@ jobs:
         run: |
           ./install_oobee_dependencies.command
 
+      - name: Decode & import certs into temporary keychain
+        run: |
+          # --- prepare tmp dir ---
+          mkdir -p /tmp/signing
+
+          # --- decode into /tmp ---
+          echo "$CER_B64" | openssl base64 -d -A > /tmp/signing/developer_id_application.cer
+          echo "$P12_B64" | openssl base64 -d -A > /tmp/signing/developer_id_application.p12
+
+          # --- create & unlock keychain ---
+          security create-keychain -p "" build.keychain
+          security set-keychain-settings -lut 7200 build.keychain
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+
+          # --- import cert + key, grant codesign access ---
+          security import /tmp/signing/developer_id_application.cer \
+            -k build.keychain \
+            -T /usr/bin/codesign
+          security import /tmp/signing/developer_id_application.p12 \
+            -k build.keychain \
+            -P "$P12_PASSWORD" \
+            -T /usr/bin/codesign
+
+          # 1) Unlock it (just to be safe)
+          security unlock-keychain -p "" build.keychain
+
+          # 2) Allow codesign to use the key without prompting
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s -k "" \
+            build.keychain
+
+          # --- delete entire tmp dir ---
+          rm -rf -v /tmp/signing/* && rm -rf /tmp/signing
+          
+      - name: Locate signing identity
+        id: find_identity
+        run: |
+          ID=$(security find-identity -v -p codesigning build.keychain \
+               | grep "Developer ID Application:" \
+               | sed -E 's/^[[:space:]]*[0-9]+\) ([^"]+).*$/\1/')
+          echo "id=$ID" >> $GITHUB_OUTPUT
+
       - name: Sign required binaries for MacOS
         run: |
           # Find a valid code signing certificate in your keychain for distribution outside Mac App Store
@@ -89,6 +138,10 @@ jobs:
             fi
           done
 
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain build.keychain
+        
       - name: Zip entire Purple folder (Mac)
         run: |
           zip oobee-portable-mac.zip -y -r ./
