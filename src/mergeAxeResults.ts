@@ -78,6 +78,7 @@ type AllIssues = {
     htmlETL: any;
     rules: string[];
   };
+  siteName: string;
   startTime: Date;
   endTime: Date;
   urlScanned: string;
@@ -1638,7 +1639,7 @@ const sendWcagBreakdownToSentry = async (
       tags['WCAG-MustFix-Occurrences'] = String(allIssues.items.mustFix.totalItems);
       tags['WCAG-GoodToFix-Occurrences'] = String(allIssues.items.goodToFix.totalItems);
       tags['WCAG-NeedsReview-Occurrences'] = String(allIssues.items.needsReview.totalItems);
-      
+
       // Add number of pages scanned tag
       tags['Pages-Scanned-Count'] = String(allIssues.totalPagesScanned);
     } else if (pagesScannedCount > 0) {
@@ -1667,7 +1668,7 @@ const sendWcagBreakdownToSentry = async (
         ...(userData && userData.userId ? { id: userData.userId } : {}),
       },
       extra: {
-        additionalScanMetadata: ruleIdJson != null ? JSON.stringify(ruleIdJson)  : "{}",
+        additionalScanMetadata: ruleIdJson != null ? JSON.stringify(ruleIdJson) : '{}',
         wcagBreakdown: wcagCriteriaBreakdown,
         reportCounts: allIssues
           ? {
@@ -1766,6 +1767,7 @@ const generateArtifacts = async (
       htmlETL: oobeeAiHtmlETL,
       rules: oobeeAiRules,
     },
+    siteName: (pagesScanned[0]?.pageTitle ?? '').replace(/^\d+\s*:\s*/, '').trim(),
     startTime: scanDetails.startTime ? scanDetails.startTime : new Date(),
     endTime: scanDetails.endTime ? scanDetails.endTime : new Date(),
     urlScanned,
@@ -1852,6 +1854,10 @@ const generateArtifacts = async (
 
   printMessage([
     'Scan Summary',
+    '',
+    `Site Name: ${allIssues.siteName}`,
+    `URL: ${allIssues.urlScanned}`,
+    `Pages Scanned: ${allIssues.totalPagesScanned}`,
     '',
     `Must Fix: ${allIssues.items.mustFix.rules.length} ${Object.keys(allIssues.items.mustFix.rules).length === 1 ? 'issue' : 'issues'} / ${allIssues.items.mustFix.totalItems} ${allIssues.items.mustFix.totalItems === 1 ? 'occurrence' : 'occurrences'}`,
     `Good to Fix: ${allIssues.items.goodToFix.rules.length} ${Object.keys(allIssues.items.goodToFix.rules).length === 1 ? 'issue' : 'issues'} / ${allIssues.items.goodToFix.totalItems} ${allIssues.items.goodToFix.totalItems === 1 ? 'occurrence' : 'occurrences'}`,

@@ -21,7 +21,7 @@ import constants, {
   RuleFlags,
   STATUS_CODE_METADATA,
   disallowedListOfPatterns,
-  disallowedSelectorPatterns
+  disallowedSelectorPatterns,
 } from '../constants/constants.js';
 import {
   getPlaywrightLaunchOptions,
@@ -310,9 +310,9 @@ const crawlDomain = async ({
       const isAlreadyScanned: boolean = urlsCrawled.scanned.some(item => item.url === newPageUrl);
       const isBlacklistedUrl: boolean = isBlacklisted(newPageUrl, blacklistedPatterns);
       const isNotFollowStrategy: boolean = !isFollowStrategy(newPageUrl, initialPageUrl, strategy);
-      const isNotSupportedDocument: boolean  = disallowedListOfPatterns.some(pattern =>
-          newPageUrl.toLowerCase().startsWith(pattern)
-    );
+      const isNotSupportedDocument: boolean = disallowedListOfPatterns.some(pattern =>
+        newPageUrl.toLowerCase().startsWith(pattern),
+      );
       return isNotSupportedDocument || isAlreadyScanned || isBlacklistedUrl || isNotFollowStrategy;
     };
     const setPageListeners = (page: Page): void => {
@@ -440,7 +440,10 @@ const crawlDomain = async ({
               const shouldSkip = await shouldSkipClickDueToDisallowedHref(page, element);
               if (shouldSkip) {
                 const elementHtml = await page.evaluate(el => el.outerHTML, element);
-                silentLogger.info('Skipping a click due to disallowed href nearby. Element HTML:', elementHtml);
+                silentLogger.info(
+                  'Skipping a click due to disallowed href nearby. Element HTML:',
+                  elementHtml,
+                );
                 continue;
               }
 
@@ -468,7 +471,7 @@ const crawlDomain = async ({
   }
 
   await initModifiedUserAgent(browser, playwrightDeviceDetailsObject);
-  
+
   const crawler = new crawlee.PlaywrightCrawler({
     launchContext: {
       launcher: constants.launcher,
@@ -499,32 +502,32 @@ const crawlDomain = async ({
           return new Promise(resolve => {
             let timeout;
             let mutationCount = 0;
-            const MAX_MUTATIONS     = 250;   // stop if things never quiet down
-            const OBSERVER_TIMEOUT  = 5000;  // hard cap on total wait
-    
+            const MAX_MUTATIONS = 250; // stop if things never quiet down
+            const OBSERVER_TIMEOUT = 5000; // hard cap on total wait
+
             const observer = new MutationObserver(() => {
               clearTimeout(timeout);
-    
+
               mutationCount++;
               if (mutationCount > MAX_MUTATIONS) {
                 observer.disconnect();
                 resolve('Too many mutations, exiting.');
                 return;
               }
-    
+
               // restart quiet‑period timer
               timeout = setTimeout(() => {
                 observer.disconnect();
                 resolve('DOM stabilized.');
               }, 1000);
             });
-    
+
             // overall timeout in case the page never settles
             timeout = setTimeout(() => {
               observer.disconnect();
               resolve('Observer timeout reached.');
             }, OBSERVER_TIMEOUT);
-    
+
             const root = document.documentElement || document.body || document;
             if (!root || typeof observer.observe !== 'function') {
               resolve('No root node to observe.');
@@ -552,31 +555,31 @@ const crawlDomain = async ({
     ],
     preNavigationHooks: isBasicAuth
       ? [
-        async ({ page, request }) => {
-          await page.setExtraHTTPHeaders({
-            Authorization: authHeader,
-            ...extraHTTPHeaders,
-          });
-          const processible = await isProcessibleUrl(request.url);
-          if (!processible) {
-            request.skipNavigation = true;
-            return null;
-          }
-        },
-      ]
+          async ({ page, request }) => {
+            await page.setExtraHTTPHeaders({
+              Authorization: authHeader,
+              ...extraHTTPHeaders,
+            });
+            const processible = await isProcessibleUrl(request.url);
+            if (!processible) {
+              request.skipNavigation = true;
+              return null;
+            }
+          },
+        ]
       : [
-        async ({ page, request }) => {
-          await page.setExtraHTTPHeaders({
-            ...extraHTTPHeaders,
-          });
+          async ({ page, request }) => {
+            await page.setExtraHTTPHeaders({
+              ...extraHTTPHeaders,
+            });
 
-          const processible = await isProcessibleUrl(request.url);
-          if (!processible) {
-            request.skipNavigation = true;
-            return null;
-          }
-        },
-      ],
+            const processible = await isProcessibleUrl(request.url);
+            if (!processible) {
+              request.skipNavigation = true;
+              return null;
+            }
+          },
+        ],
     requestHandlerTimeoutSecs: 90, // Allow each page to be processed by up from default 60 seconds
     requestHandler: async ({ page, request, response, crawler, sendRequest, enqueueLinks }) => {
       const browserContext: BrowserContext = page.context();
@@ -599,7 +602,10 @@ const crawlDomain = async ({
           actualUrl = page.url();
         }
 
-        if (!isFollowStrategy(url, actualUrl, strategy) && (isBlacklisted(actualUrl, blacklistedPatterns) || (isUrlPdf(actualUrl) && !isScanPdfs))) {
+        if (
+          !isFollowStrategy(url, actualUrl, strategy) &&
+          (isBlacklisted(actualUrl, blacklistedPatterns) || (isUrlPdf(actualUrl) && !isScanPdfs))
+        ) {
           guiInfoLog(guiInfoStatusTypes.SKIPPED, {
             numScanned: urlsCrawled.scanned.length,
             urlScanned: actualUrl,
@@ -625,7 +631,7 @@ const crawlDomain = async ({
         }
 
         // handle pdfs
-        if (request.skipNavigation && actualUrl === "about:blank") {
+        if (request.skipNavigation && actualUrl === 'about:blank') {
           if (!isScanPdfs) {
             guiInfoLog(guiInfoStatusTypes.SKIPPED, {
               numScanned: urlsCrawled.scanned.length,
@@ -669,7 +675,11 @@ const crawlDomain = async ({
           return;
         }
 
-        if (!isFollowStrategy(url, actualUrl, strategy) && blacklistedPatterns && isSkippedUrl(actualUrl, blacklistedPatterns)) {
+        if (
+          !isFollowStrategy(url, actualUrl, strategy) &&
+          blacklistedPatterns &&
+          isSkippedUrl(actualUrl, blacklistedPatterns)
+        ) {
           urlsCrawled.userExcluded.push({
             url: request.url,
             pageTitle: request.url,
@@ -677,7 +687,7 @@ const crawlDomain = async ({
             metadata: STATUS_CODE_METADATA[0],
             httpStatusCode: 0,
           });
-          
+
           guiInfoLog(guiInfoStatusTypes.SKIPPED, {
             numScanned: urlsCrawled.scanned.length,
             urlScanned: request.url,
@@ -692,11 +702,7 @@ const crawlDomain = async ({
           const isRedirected = !areLinksEqual(actualUrl, request.url);
 
           // check if redirected link is following strategy (same-domain/same-hostname)
-          const isLoadedUrlFollowStrategy = isFollowStrategy(
-            actualUrl,
-            request.url,
-            strategy,
-          );
+          const isLoadedUrlFollowStrategy = isFollowStrategy(actualUrl, request.url, strategy);
           if (isRedirected && !isLoadedUrlFollowStrategy) {
             urlsCrawled.notScannedRedirects.push({
               fromUrl: request.url,
@@ -706,7 +712,7 @@ const crawlDomain = async ({
           }
 
           const responseStatus = response?.status();
-            if (responseStatus && responseStatus >= 300) {
+          if (responseStatus && responseStatus >= 300) {
             guiInfoLog(guiInfoStatusTypes.SKIPPED, {
               numScanned: urlsCrawled.scanned.length,
               urlScanned: request.url,
@@ -719,7 +725,7 @@ const crawlDomain = async ({
               httpStatusCode: responseStatus,
             });
             return;
-            }
+          }
 
           const results = await runAxeScript({ includeScreenshots, page, randomToken, ruleset });
 
@@ -785,7 +791,6 @@ const crawlDomain = async ({
             metadata: STATUS_CODE_METADATA[1],
             httpStatusCode: 0,
           });
-
         }
 
         if (followRobots) await getUrlsFromRobotsTxt(request.url, browser);
@@ -828,11 +833,11 @@ const crawlDomain = async ({
             urlScanned: request.url,
           });
 
-          urlsCrawled.error.push({ 
-            url: request.url, 
-            pageTitle: request.url, 
-            actualUrl: request.url, 
-            metadata: STATUS_CODE_METADATA[2] 
+          urlsCrawled.error.push({
+            url: request.url,
+            pageTitle: request.url,
+            actualUrl: request.url,
+            metadata: STATUS_CODE_METADATA[2],
           });
         }
       }
@@ -844,9 +849,10 @@ const crawlDomain = async ({
       });
 
       const status = response?.status();
-      const metadata = typeof status === 'number'
-      ? (STATUS_CODE_METADATA[status] || STATUS_CODE_METADATA[599])
-      : STATUS_CODE_METADATA[2];
+      const metadata =
+        typeof status === 'number'
+          ? STATUS_CODE_METADATA[status] || STATUS_CODE_METADATA[599]
+          : STATUS_CODE_METADATA[2];
 
       urlsCrawled.error.push({
         url: request.url,
@@ -855,7 +861,6 @@ const crawlDomain = async ({
         metadata,
         httpStatusCode: typeof status === 'number' ? status : 0,
       });
-
     },
     maxRequestsPerCrawl: Infinity,
     maxConcurrency: specifiedMaxConcurrency || maxConcurrency,

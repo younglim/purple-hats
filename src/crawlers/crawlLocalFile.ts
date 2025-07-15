@@ -1,12 +1,14 @@
 import { Request, RequestList } from 'crawlee';
-import printMessage from 'print-message';
 import fs from 'fs';
 import path from 'path';
 import { createCrawleeSubFolders, runAxeScript, isUrlPdf } from './commonCrawlerFunc.js';
-import constants, { guiInfoStatusTypes, basicAuthRegex } from '../constants/constants.js';
+import constants, {
+  guiInfoStatusTypes,
+  basicAuthRegex,
+  UrlsCrawled,
+} from '../constants/constants.js';
 import {
   getPlaywrightLaunchOptions,
-  messageOptions,
   isFilePath,
   convertLocalFileToPath,
   convertPathToLocalFile,
@@ -35,7 +37,7 @@ const crawlLocalFile = async (
   urlsCrawledFromIntelligent: any = null, // optional
 ) => {
   let dataset: any;
-  let urlsCrawled: any;
+  let urlsCrawled: UrlsCrawled;
   let linksFromSitemap = [];
 
   // Boolean to omit axe scan for basic auth URL
@@ -124,15 +126,11 @@ const crawlLocalFile = async (
 
   const uuidToPdfMapping: Record<string, string> = {}; // key and value of string type
 
-  printMessage(['Fetching URLs. This might take some time...'], { border: false });
-
   finalLinks = [...finalLinks, ...linksFromSitemap];
 
   await RequestList.open({
     sources: finalLinks,
   });
-
-  printMessage(['Fetch URLs completed. Beginning scan'], messageOptions);
 
   const request = linksFromSitemap[0];
   const pdfFileName = path.basename(request.url);
@@ -178,7 +176,11 @@ const crawlLocalFile = async (
 
     await dataset.pushData(results);
   } else {
-    urlsCrawled.scanned.push({ url: trimmedUrl, pageTitle: pdfFileName });
+    urlsCrawled.scanned.push({
+      url: trimmedUrl,
+      pageTitle: pdfFileName,
+      actualUrl: trimmedUrl,
+    });
 
     await runPdfScan(randomToken);
     // transform result format
@@ -192,6 +194,7 @@ const crawlLocalFile = async (
     // push results for each pdf document to key value store
     await Promise.all(pdfResults.map(result => dataset.pushData(result)));
   }
+
   return urlsCrawled;
 };
 export default crawlLocalFile;
