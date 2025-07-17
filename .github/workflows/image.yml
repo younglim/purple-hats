@@ -119,25 +119,46 @@ jobs:
                | sed -E 's/^[[:space:]]*[0-9]+\) ([^"]+).*$/\1/')
           echo "id=$ID" >> $GITHUB_OUTPUT
 
-      - name: Sign required binaries for MacOS
+      - name: Sign all Mach-O binaries (deep)
+        shell: bash
         run: |
-          # Find a valid code signing certificate in your keychain for distribution outside Mac App Store
-          CERTIFICATE=$(security find-identity -v -p codesigning -s - | tail -n +2 | grep -o '"Developer ID Application:[^"]*"' | sed 's/"//g')
+          set -euo pipefail
 
-          # Paths to the binaries you want to sign only ending with .node
-          BINARIES=($(find . -type f \( -name "*.node" -o -name "*.sh" -o -name "*.command" \) ! -path "*.framework/*" ! -path "*.dSYM/*"))
+          # Ensure the build keychain is available & unlocked in THIS step
+          security list-keychains -d user -s build.keychain
+          security default-keychain -d user -s build.keychain
+          security unlock-keychain -p "" build.keychain
 
-          # Loop through the binary paths and sign each one with a secure timestamp
-          for binary in "${BINARIES[@]}"; do
-            # Check if the binary is already signed
-            codesign --timestamp -f -s "$CERTIFICATE" "$binary"
-            if [ $? -eq 0 ]; then
-              echo "Successfully signed (with secure timestamp): $binary"
-            else
-              echo "Failed to sign: $binary"
-            fi
-          done
+          echo "Available signing identities in build.keychain:"
+          security find-identity -v -p codesigning build.keychain || true
 
+          # Extract the FULL identity name (between the quotes)
+          CERTIFICATE_NAME=$(security find-identity -v -p codesigning build.keychain \
+            | awk -F\" '/Developer ID Application:/{print $2; exit}')
+
+          if [[ -z "${CERTIFICATE_NAME}" ]]; then
+            echo "ERROR: No 'Developer ID Application' identity found in build.keychain."
+            exit 1
+          fi
+          echo "Using identity: ${CERTIFICATE_NAME}"
+
+          # Ensure we can re-sign files (node_modules sometimes read-only)
+          chmod -R u+w "$GITHUB_WORKSPACE/oobee"
+
+          # Sign all Mach-O (exec bits OR dylib OR node native addons)
+          while IFS= read -r f; do
+            echo "Signing $f"
+            codesign --force --options runtime --timestamp --sign "${CERTIFICATE_NAME}" "$f"
+          done < <(
+            find "$GITHUB_WORKSPACE/oobee" -type f \
+              \( -perm -111 -o -name "*.dylib" -o -name "*.node" \) \
+              ! -path "*/.git/*"
+          )
+
+          echo "Verifying signatures of Mach-O files..."
+          find "$GITHUB_WORKSPACE/oobee" -type f \( -perm -111 -o -name "*.dylib" -o -name "*.node" \) \
+            -exec codesign --verify --strict --verbose=2 {} \; || true
+          
       - name: Cleanup keychain
         if: always()
         run: security delete-keychain build.keychain
