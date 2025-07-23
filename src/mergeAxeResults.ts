@@ -1902,6 +1902,8 @@ const generateArtifacts = async (
   consoleLogger.info(`Elapsed Time: ${elapsedSeconds}s`);
   consoleLogger.info(`Device: ${allIssues.deviceChosen}`);
   consoleLogger.info(`Viewport: ${allIssues.viewport}`);
+  consoleLogger.info(`Scan Type: ${allIssues.scanType}`);
+  consoleLogger.info(`Label: ${allIssues.customFlowLabel || 'N/A'}`);
   
   const getAxeImpactCount = (allIssues: AllIssues) => {
     const impactCount = {
