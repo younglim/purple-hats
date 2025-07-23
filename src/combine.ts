@@ -55,7 +55,7 @@ const combineRun = async (details: Data, deviceToScan: string) => {
     includeScreenshots, // Include screenshots: if checked, = 'true'
     followRobots, // Adhere to robots.txt: if checked, = 'true'
     metadata,
-    customFlowLabel = 'Custom Flow',
+    customFlowLabel = 'None',
     extraHTTPHeaders,
     safeMode,
     zip,

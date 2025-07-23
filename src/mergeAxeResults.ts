@@ -1851,10 +1851,18 @@ const generateArtifacts = async (
 
   printMessage([
     'Scan Summary',
+    `Oobee App Version: ${allIssues.oobeeAppVersion}`,
     '',
     `Site Name: ${allIssues.siteName}`,
     `URL: ${allIssues.urlScanned}`,
     `Pages Scanned: ${allIssues.totalPagesScanned}`,
+    `Start Time: ${allIssues.startTime}`,
+    `End Time: ${allIssues.endTime}`,
+    `Elapsed Time: ${(new Date(allIssues.endTime).getTime() - new Date(allIssues.startTime).getTime()) / 1000}s`,
+    `Device: ${allIssues.deviceChosen}`,
+    `Viewport: ${allIssues.viewport}`,
+    `Scan Type: ${allIssues.scanType}`,
+    `Label: ${allIssues.customFlowLabel || 'N/A'}`,
     '',
     `Must Fix: ${allIssues.items.mustFix.rules.length} ${Object.keys(allIssues.items.mustFix.rules).length === 1 ? 'issue' : 'issues'} / ${allIssues.items.mustFix.totalItems} ${allIssues.items.mustFix.totalItems === 1 ? 'occurrence' : 'occurrences'}`,
     `Good to Fix: ${allIssues.items.goodToFix.rules.length} ${Object.keys(allIssues.items.goodToFix.rules).length === 1 ? 'issue' : 'issues'} / ${allIssues.items.goodToFix.totalItems} ${allIssues.items.goodToFix.totalItems === 1 ? 'occurrence' : 'occurrences'}`,
@@ -1892,7 +1900,9 @@ const generateArtifacts = async (
   consoleLogger.info(`End Time: ${allIssues.endTime}`);
   const elapsedSeconds = (new Date(allIssues.endTime).getTime() - new Date(allIssues.startTime).getTime()) / 1000;
   consoleLogger.info(`Elapsed Time: ${elapsedSeconds}s`);
-
+  consoleLogger.info(`Device: ${allIssues.deviceChosen}`);
+  consoleLogger.info(`Viewport: ${allIssues.viewport}`);
+  
   const getAxeImpactCount = (allIssues: AllIssues) => {
     const impactCount = {
       critical: 0,
