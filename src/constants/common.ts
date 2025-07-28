@@ -277,104 +277,6 @@ export const sanitizeUrlInput = (url: string): { isValid: boolean; url: string }
   return { isValid: false, url: sanitizeUrl };
 };
 
-const requestToUrl = async (
-  url: string,
-  isCustomFlow: boolean,
-  extraHTTPHeaders: Record<string, string>,
-) => {
-  // User-Agent is modified to emulate a browser to handle cases where some sites ban non browser agents, resulting in a 403 error
-  const res = new RES();
-  const parsedUrl = new URL(url);
-  await axios
-    .get(parsedUrl.href, {
-      headers: {
-        ...extraHTTPHeaders,
-        'User-Agent': devices['Desktop Chrome HiDPI'].userAgent,
-        Host: parsedUrl.host,
-      },
-      auth: {
-        username: decodeURIComponent(parsedUrl.username),
-        password: decodeURIComponent(parsedUrl.password),
-      },
-      httpsAgent,
-      timeout: 5000,
-    })
-    .then(async response => {
-      let redirectUrl = response.request.res.responseUrl;
-      redirectUrl = new URL(redirectUrl).href;
-      res.status = constants.urlCheckStatuses.success.code;
-      let data;
-      if (typeof response.data === 'string' || response.data instanceof String) {
-        data = response.data;
-      } else if (typeof response.data === 'object' && response.data !== null) {
-        try {
-          data = JSON.stringify(response.data);
-        } catch (error) {
-          console.log('Error converting object to JSON:', error);
-        }
-      } else {
-        console.log('Unsupported data type:', typeof response.data);
-      }
-      const modifiedHTML = data.replace(/<noscript>[\s\S]*?<\/noscript>/gi, '');
-
-      const metaRefreshMatch =
-        /<meta\s+http-equiv="refresh"\s+content="(?:\d+;)?\s*url=(?:'([^']*)'|"([^"]*)"|([^>]*))"/i.exec(
-          modifiedHTML,
-        );
-
-      const hasMetaRefresh = metaRefreshMatch && metaRefreshMatch.length > 1;
-
-      if (redirectUrl != null && (hasMetaRefresh || !isCustomFlow)) {
-        res.url = redirectUrl;
-      } else {
-        res.url = url;
-      }
-
-      if (hasMetaRefresh) {
-        let urlOrRelativePath;
-
-        for (let i = 1; i < metaRefreshMatch.length; i++) {
-          if (metaRefreshMatch[i] !== undefined && metaRefreshMatch[i] !== null) {
-            urlOrRelativePath = metaRefreshMatch[i];
-            break; // Stop the loop once the first non-null value is found
-          }
-        }
-
-        if (urlOrRelativePath.includes('URL=')) {
-          res.url = urlOrRelativePath.split('URL=').pop();
-        } else {
-          const pathname = res.url.substring(0, res.url.lastIndexOf('/'));
-          res.url = new URL(urlOrRelativePath, pathname).toString();
-        }
-      }
-
-      res.content = response.data;
-    })
-    .catch(async error => {
-      if (error.code === 'ECONNABORTED' || error.code === 'ERR_FR_TOO_MANY_REDIRECTS') {
-        res.status = constants.urlCheckStatuses.axiosTimeout.code;
-      } else if (error.response) {
-        if (error.response.status === 401) {
-          // enters here if URL is protected by basic auth
-          res.status = constants.urlCheckStatuses.unauthorised.code;
-        } else {
-          // enters here if server responds with a status other than 2xx
-          // the scan should still proceed even if error codes are received, so that accessibility scans for error pages can be done too
-          res.status = constants.urlCheckStatuses.success.code;
-        }
-        res.url = url;
-        res.content = error.response.data;
-        return res;
-      } else if (error.request) {
-        // enters here if URL cannot be accessed
-        res.status = constants.urlCheckStatuses.cannotBeResolved.code;
-      } else {
-        res.status = constants.urlCheckStatuses.systemError.code;
-      }
-    });
-  return res;
-};
-
 const checkUrlConnectivityWithBrowser = async (
   url: string,
   browserToRun: string,
@@ -392,8 +294,8 @@ const checkUrlConnectivityWithBrowser = async (
 
   let viewport = null;
   let userAgent = null;
-  if (playwrightDeviceDetailsObject && 'viewport' in playwrightDeviceDetailsObject) viewport = playwrightDeviceDetailsObject.viewport;
-  if (playwrightDeviceDetailsObject && 'userAgent' in playwrightDeviceDetailsObject) userAgent = playwrightDeviceDetailsObject.userAgent;
+  if (playwrightDeviceDetailsObject?.viewport) viewport = playwrightDeviceDetailsObject.viewport;
+  if (playwrightDeviceDetailsObject?.userAgent) userAgent = playwrightDeviceDetailsObject.userAgent;
 
   // Ensure Accept header for non-html content fallback
   extraHTTPHeaders['Accept'] ||= 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
@@ -421,42 +323,70 @@ const checkUrlConnectivityWithBrowser = async (
   try {
     const page = await browserContext.newPage();
 
-    // Skip Playwright for PDF (use raw request instead)
-    if (isUrlPdf(url)) {
-      return await requestToUrl(url, false, extraHTTPHeaders);
-    }
-
-    const response = await page.goto(url, {
-      timeout: 30000,
-      ...(proxy && { waitUntil: 'commit' }),
-    });
+    // STEP 1: HEAD request before actual navigation
+    let statusCode = 0;
+    let contentType = '';
+    let disposition = '';
 
     try {
-      await page.waitForLoadState('networkidle', { timeout: 10000 });
-    } catch {
-      consoleLogger.info('Unable to detect networkidle');
+      const headResp = await page.request.fetch(url, {
+        method: 'HEAD',
+        headers: extraHTTPHeaders,
+      });
+
+      statusCode = headResp.status();
+      contentType = headResp.headers()['content-type'] || '';
+      disposition = headResp.headers()['content-disposition'] || '';
+
+      // If it looks like a downloadable file, skip goto entirely
+      if (
+        contentType.includes('pdf') ||
+        contentType.includes('octet-stream') ||
+        disposition.includes('attachment')
+      ) {
+        res.status = statusCode === 401
+          ? constants.urlCheckStatuses.unauthorised.code
+          : constants.urlCheckStatuses.success.code;
+
+        res.httpStatus = statusCode;
+        res.url = url;
+        res.content = ''; // Don't try to render binary
+
+        await browserContext.close();
+        return res;
+      }
+    } catch (e) {
+      consoleLogger.info(`HEAD request failed: ${e.message}`);
+      res.status = constants.urlCheckStatuses.systemError.code;
+      await browserContext.close();
+      return res;
     }
 
-    const status = response.status();
-    res.status = status === 401
+    // STEP 2: Safe to proceed with navigation
+    const response = await page.goto(url, {
+      timeout: 30000,
+      waitUntil: 'commit', // Don't wait for full load
+    });
+
+    const finalStatus = statusCode || (response?.status?.() ?? 0);
+    res.status = finalStatus === 401
       ? constants.urlCheckStatuses.unauthorised.code
       : constants.urlCheckStatuses.success.code;
 
-    // Store the status code
-    res.httpStatus = response?.status?.() ?? 0;
-
-    // Store final navigated URL
+    res.httpStatus = finalStatus;
     res.url = page.url();
 
-    // Check content type to determine how to extract content
-    const contentType = response.headers()['content-type'] || '';
-
-    if (contentType.includes('xml') || res.url.endsWith('.xml')) {
-      // Fetch raw content to avoid Playwright's HTML-wrapped <pre> behavior
-      const rawResponse = await requestToUrl(res.url, true, extraHTTPHeaders);
-      res.content = rawResponse.content;
+    contentType = response?.headers()?.['content-type'] || '';
+    if (contentType.includes('pdf') || contentType.includes('octet-stream')) {
+      res.content = ''; // Avoid triggering render/download
     } else {
-      res.content = await page.content(); // rendered DOM
+      try {
+        await page.waitForLoadState('networkidle', { timeout: 10000 });
+      } catch {
+        consoleLogger.info('Unable to detect networkidle');
+      }
+
+      res.content = await page.content();
     }
 
   } catch (error) {
@@ -600,11 +530,6 @@ export const prepareData = async (argv: Answers): Promise<Data> => {
     resultFilename = `${date}_${time}${sanitisedLabel}_${domain}`;
   }
 
-  if (followRobots) {
-    constants.robotsTxtUrls = {};
-    await getUrlsFromRobotsTxt(url, browserToRun);
-  }
-
   // Creating the playwrightDeviceDetailObject
   deviceChosen = customDevice === 'Desktop' || customDevice === 'Mobile' ? customDevice : deviceChosen;
   
@@ -616,7 +541,16 @@ export const prepareData = async (argv: Answers): Promise<Data> => {
 
   const { browserToRun: resolvedBrowser, clonedBrowserDataDir } = getBrowserToRun(browserToRun, true);
   browserToRun = resolvedBrowser;
-  
+
+  const resolvedUserDataDirectory = getClonedProfilesWithRandomToken(browserToRun, resultFilename);
+
+  const extraHTTPHeaders = parseHeaders(header)
+
+  if (followRobots) {
+    constants.robotsTxtUrls = {};
+    await getUrlsFromRobotsTxt(url, browserToRun, resolvedUserDataDirectory, extraHTTPHeaders);
+  }
+
   return {
     type: scanner,
     url: url,
@@ -640,9 +574,9 @@ export const prepareData = async (argv: Answers): Promise<Data> => {
     includeScreenshots: !(additional === 'none'),
     metadata,
     followRobots,
-    extraHTTPHeaders: parseHeaders(header),
+    extraHTTPHeaders: extraHTTPHeaders,
     safeMode,
-    userDataDirectory: getClonedProfilesWithRandomToken(browserToRun, resultFilename),
+    userDataDirectory: resolvedUserDataDirectory,
     zip,
     ruleset,
     generateJsonFiles,
@@ -650,7 +584,7 @@ export const prepareData = async (argv: Answers): Promise<Data> => {
   };
 };
 
-export const getUrlsFromRobotsTxt = async (url: string, browserToRun: string): Promise<void> => {
+export const getUrlsFromRobotsTxt = async (url: string, browserToRun: string, userDataDirectory: string, extraHTTPHeaders: Record<string, string>): Promise<void> => {
   if (!constants.robotsTxtUrls) return;
 
   const domain = new URL(url).origin;
@@ -659,22 +593,18 @@ export const getUrlsFromRobotsTxt = async (url: string, browserToRun: string): P
 
   let robotsTxt: string;
   try {
-    if (proxy) {
-      robotsTxt = await getRobotsTxtViaPlaywright(robotsUrl, browserToRun);
-    } else {
-      robotsTxt = await getRobotsTxtViaAxios(robotsUrl);
-    }
+    robotsTxt = await getRobotsTxtViaPlaywright(robotsUrl, browserToRun, userDataDirectory, extraHTTPHeaders);
+    consoleLogger.info(`Fetched robots.txt from ${robotsUrl}`);
   } catch (e) {
     // if robots.txt is not found, do nothing
+    consoleLogger.info(`Unable to fetch robots.txt from ${robotsUrl}`);
   }
-  console.log('robotsTxt', robotsTxt);
+
   if (!robotsTxt) {
     constants.robotsTxtUrls[domain] = {};
     return;
   }
-
-  console.log('Found robots.txt: ', robotsUrl);
-
+  
   const lines = robotsTxt.split(/\r?\n/);
   let shouldCapture = false;
   const disallowedUrls = [];
@@ -722,27 +652,28 @@ export const getUrlsFromRobotsTxt = async (url: string, browserToRun: string): P
   constants.robotsTxtUrls[domain] = { disallowedUrls, allowedUrls };
 };
 
-const getRobotsTxtViaPlaywright = async (robotsUrl: string, browser: string): Promise<string> => {
-  const browserContext = await constants.launcher.launchPersistentContext('', {
+const getRobotsTxtViaPlaywright = async (robotsUrl: string, browser: string, userDataDirectory: string, extraHTTPHeaders: Record<string, string>): Promise<string> => {
+
+  let robotsDataDir = '';
+  // Bug in Chrome which causes browser pool crash when userDataDirectory is set in non-headless mode
+  if (process.env.CRAWLEE_HEADLESS === '1') {
+    // Create robots own user data directory else SingletonLock: File exists (17) with crawlDomain or crawlSitemap's own browser
+    const robotsDataDir = path.join(userDataDirectory, 'robots');
+    if (!fs.existsSync(robotsDataDir)) {
+      fs.mkdirSync(robotsDataDir, { recursive: true });
+    }
+  }
+
+  const browserContext = await constants.launcher.launchPersistentContext(robotsDataDir, {
     ...getPlaywrightLaunchOptions(browser),
   });
 
   const page = await browserContext.newPage();
-  await page.goto(robotsUrl, { waitUntil: 'networkidle', timeout: 30000 });
-
-  const robotsTxt: string | null = await page.evaluate(() => document.body.textContent);
-  return robotsTxt;
-};
-
-const getRobotsTxtViaAxios = async (robotsUrl: string): Promise<string> => {
-  const instance = axios.create({
-    httpsAgent: new https.Agent({
-      rejectUnauthorized: false,
-      keepAlive: true,
-    }),
+  await page.setExtraHTTPHeaders({
+        ...extraHTTPHeaders,
   });
-
-  const robotsTxt = (await (await instance.get(robotsUrl, { timeout: 2000 })).data) as string;
+  await page.goto(robotsUrl, { waitUntil: 'networkidle', timeout: 30000 });
+  const robotsTxt: string | null = await page.evaluate(() => document.body.textContent);
   return robotsTxt;
 };
 
@@ -779,6 +710,7 @@ export const getLinksFromSitemap = async (
   isIntelligent: boolean,
   username: string,
   password: string,
+  extraHTTPHeaders: Record<string, string>,
 ) => {
   const scannedSitemaps = new Set<string>();
   const urls: Record<string, Request> = {}; // dictionary of requests to urls to be scanned
@@ -895,6 +827,8 @@ export const getLinksFromSitemap = async (
 
     let parsedUrl;
 
+    let authHeader = '';
+
     if (scannedSitemaps.has(url)) {
       // Skip processing if the sitemap has already been scanned
       return;
@@ -918,6 +852,10 @@ export const getLinksFromSitemap = async (
         isBasicAuth = true;
         username = decodeURIComponent(parsedUrl.username);
         password = decodeURIComponent(parsedUrl.password);
+
+        // Create auth header
+        authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+
         parsedUrl.username = '';
         parsedUrl.password = '';
       }
@@ -932,10 +870,24 @@ export const getLinksFromSitemap = async (
         {
           ...getPlaywrightLaunchOptions(browser),
           // Not necessary to parse http_credentials as I am parsing it directly in URL
+          // Bug in Chrome which causes browser pool crash when userDataDirectory is set in non-headless mode
+          ...(process.env.CRAWLEE_HEADLESS === '1' && { userDataDir: userDataDirectory }),
         },
       );
 
       const page = await browserContext.newPage();
+      
+      if (isBasicAuth) {
+        await page.setExtraHTTPHeaders({
+          Authorization: authHeader,
+          ...extraHTTPHeaders,
+        });
+      } else {
+        await page.setExtraHTTPHeaders({
+          ...extraHTTPHeaders,
+        });
+      }
+
       await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
       if (constants.launcher === webkit) {
         data = await page.locator('body').innerText();
@@ -965,35 +917,14 @@ export const getLinksFromSitemap = async (
         addToUrlList(url);
         return;
       }
-      if (proxy) {
-        await getDataUsingPlaywright();
-      } else {
-        try {
-          const instance = axios.create({
-            httpsAgent: new https.Agent({
-              rejectUnauthorized: false,
-              keepAlive: true,
-            }),
-            auth: {
-              username,
-              password,
-            },
-          });
-          try {
-            data = await (await instance.get(url, { timeout: 80000 })).data;
-          } catch {
-            return; // to skip the error
-          }
-        } catch (error) {
-          if (error.code === 'ECONNABORTED') {
-            await getDataUsingPlaywright();
-          }
-        }
-      }
+
+      await getDataUsingPlaywright();
+
     } else {
       url = convertLocalFileToPath(url);
       data = fs.readFileSync(url, 'utf8');
     }
+
     const $ = cheerio.load(data, { xml: true });
 
     // This case is when the document is not an XML format document
