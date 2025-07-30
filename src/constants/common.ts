@@ -521,6 +521,30 @@ export const prepareData = async (argv: Answers): Promise<Data> => {
   // construct filename for scan results
   const [date, time] = new Date().toLocaleString('sv').replaceAll(/-|:/g, '').split(' ');
   const domain = argv.isLocalFileScan ? path.basename(argv.url) : new URL(argv.url).hostname;
+
+  const extraHTTPHeaders = parseHeaders(header);
+
+  // Set default username and password for basic auth
+  let username = '';
+  let password = '';
+
+  // Remove credentials from URL if not a local file scan
+  url = argv.isLocalFileScan 
+    ? url 
+    : (() => {
+        const temp = new URL(url);
+        username = temp.username;
+        password = temp.password;
+
+        if (username !== '' || password !== '') {
+          extraHTTPHeaders['Authorization'] = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+        } 
+
+        temp.username = '';
+        temp.password = '';
+        return temp.toString();
+      })();
+
   const sanitisedLabel = customFlowLabel ? `_${customFlowLabel.replaceAll(' ', '_')}` : '';
   let resultFilename: string;
   const randomThreeDigitNumber = randomThreeDigitNumberString();
@@ -543,8 +567,6 @@ export const prepareData = async (argv: Answers): Promise<Data> => {
   browserToRun = resolvedBrowser;
 
   const resolvedUserDataDirectory = getClonedProfilesWithRandomToken(browserToRun, resultFilename);
-
-  const extraHTTPHeaders = parseHeaders(header)
 
   if (followRobots) {
     constants.robotsTxtUrls = {};
@@ -666,12 +688,11 @@ const getRobotsTxtViaPlaywright = async (robotsUrl: string, browser: string, use
 
   const browserContext = await constants.launcher.launchPersistentContext(robotsDataDir, {
     ...getPlaywrightLaunchOptions(browser),
+    ...(extraHTTPHeaders && { extraHTTPHeaders }),
   });
 
   const page = await browserContext.newPage();
-  await page.setExtraHTTPHeaders({
-        ...extraHTTPHeaders,
-  });
+
   await page.goto(robotsUrl, { waitUntil: 'networkidle', timeout: 30000 });
   const robotsTxt: string | null = await page.evaluate(() => document.body.textContent);
   return robotsTxt;
@@ -708,8 +729,6 @@ export const getLinksFromSitemap = async (
   userDataDirectory: string,
   userUrlInput: string,
   isIntelligent: boolean,
-  username: string,
-  password: string,
   extraHTTPHeaders: Record<string, string>,
 ) => {
   const scannedSitemaps = new Set<string>();
@@ -720,11 +739,6 @@ export const getLinksFromSitemap = async (
   const addToUrlList = (url: string) => {
     if (!url) return;
     if (isDisallowedInRobotsTxt(url)) return;
-
-    // add basic auth credentials to the URL
-    username !== '' && password !== ''
-      ? (url = addBasicAuthCredentials(url, username, password))
-      : url;
 
     url = convertPathToLocalFile(url);
 
@@ -738,13 +752,6 @@ export const getLinksFromSitemap = async (
       request.skipNavigation = true;
     }
     urls[url] = request;
-  };
-
-  const addBasicAuthCredentials = (url: string, username: string, password: string) => {
-    const urlObject = new URL(url);
-    urlObject.username = username;
-    urlObject.password = password;
-    return urlObject.toString();
   };
 
   const calculateCloseness = (sitemapUrl: string) => {
@@ -817,18 +824,10 @@ export const getLinksFromSitemap = async (
     finalUserDataDirectory = '';
   }
 
-  const fetchUrls = async (url: string) => {
+  const fetchUrls = async (url: string, extraHTTPHeaders: Record<string, string>) => {
     let data;
     let sitemapType;
-    let isBasicAuth = false;
-
-    let username = '';
-    let password = '';
-
-    let parsedUrl;
-
-    let authHeader = '';
-
+   
     if (scannedSitemaps.has(url)) {
       // Skip processing if the sitemap has already been scanned
       return;
@@ -844,21 +843,9 @@ export const getLinksFromSitemap = async (
       if (!fs.existsSync(url)) {
         return;
       }
-      parsedUrl = url;
+
     } else if (isValidHttpUrl(url)) {
-      parsedUrl = new URL(url);
-
-      if (parsedUrl.username !== '' && parsedUrl.password !== '') {
-        isBasicAuth = true;
-        username = decodeURIComponent(parsedUrl.username);
-        password = decodeURIComponent(parsedUrl.password);
-
-        // Create auth header
-        authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
-
-        parsedUrl.username = '';
-        parsedUrl.password = '';
-      }
+      // Do nothing, url is valid
     } else {
       printMessage([`Invalid Url/Filepath: ${url}`], messageOptions);
       return;
@@ -872,24 +859,15 @@ export const getLinksFromSitemap = async (
           // Not necessary to parse http_credentials as I am parsing it directly in URL
           // Bug in Chrome which causes browser pool crash when userDataDirectory is set in non-headless mode
           ...(process.env.CRAWLEE_HEADLESS === '1' && { userDataDir: userDataDirectory }),
+          ...(extraHTTPHeaders && { extraHTTPHeaders }),
         },
       );
 
       const page = await browserContext.newPage();
-      
-      if (isBasicAuth) {
-        await page.setExtraHTTPHeaders({
-          Authorization: authHeader,
-          ...extraHTTPHeaders,
-        });
-      } else {
-        await page.setExtraHTTPHeaders({
-          ...extraHTTPHeaders,
-        });
-      }
 
       await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
-      if (constants.launcher === webkit) {
+
+      if (await page.locator('body').count() > 0) {
         data = await page.locator('body').innerText();
       } else {
         const urlSet = page.locator('urlset');
@@ -960,7 +938,7 @@ export const getLinksFromSitemap = async (
             break;
           }
           if (childSitemapUrlText.endsWith('.xml') || childSitemapUrlText.endsWith('.txt')) {
-            await fetchUrls(childSitemapUrlText); // Recursive call for nested sitemaps
+            await fetchUrls(childSitemapUrlText, extraHTTPHeaders); // Recursive call for nested sitemaps
           } else {
             addToUrlList(childSitemapUrlText); // Add regular URLs to the list
           }
@@ -985,7 +963,7 @@ export const getLinksFromSitemap = async (
   };
 
   try {
-    await fetchUrls(sitemapUrl);
+    await fetchUrls(sitemapUrl, extraHTTPHeaders);
   } catch (e) {
     consoleLogger.error(e);
   }
@@ -1808,13 +1786,6 @@ export const getPlaywrightLaunchOptions = (browser?: string): LaunchOptions => {
     options.headless = false;
   }
   return options;
-};
-
-export const urlWithoutAuth = (url: string): string => {
-  const parsedUrl = new URL(url);
-  parsedUrl.username = '';
-  parsedUrl.password = '';
-  return parsedUrl.toString();
 };
 
 export const waitForPageLoaded = async (page: Page, timeout = 10000) => {
