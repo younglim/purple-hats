@@ -13,7 +13,6 @@ import {
   isFilePath,
   convertLocalFileToPath,
   convertPathToLocalFile,
-  initModifiedUserAgent,
 } from '../constants/common.js';
 import { runPdfScan, mapPdfScanResults, doPdfScreenshots } from './pdfScanFunc.js';
 import { guiInfoLog } from '../logs.js';
@@ -74,9 +73,6 @@ export const crawlLocalFile = async ({
     ({ dataset } = await createCrawleeSubFolders(randomToken));
     urlsCrawled = { ...constants.urlsCrawledObj };
 
-    if (!fs.existsSync(randomToken)) {
-      fs.mkdirSync(randomToken);
-    }
   }
 
   // Check if the sitemapUrl is a local file and if it exists
@@ -155,7 +151,6 @@ export const crawlLocalFile = async ({
   let shouldAbort = false;
 
   if (!isUrlPdf(request.url)) {
-    await initModifiedUserAgent(browser, playwrightDeviceDetailsObject, userDataDirectory);
     const effectiveUserDataDirectory = process.env.CRAWLEE_HEADLESS === '1'
       ? userDataDirectory
       : '';

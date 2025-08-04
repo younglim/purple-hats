@@ -119,7 +119,7 @@ export const validateFilePath = (filePath: string, cliDir: string) => {
 
     return absolutePath;
   } catch {
-    throw new Error(`Please ensure path provided exists: ${absolutePath}`);
+    throw new Error(`Please ensure path provided exists and writable: ${absolutePath}`);
   }
 };
 
@@ -292,27 +292,18 @@ const checkUrlConnectivityWithBrowser = async (
     return res;
   }
 
-  let viewport = null;
-  let userAgent = null;
-  if (playwrightDeviceDetailsObject?.viewport) viewport = playwrightDeviceDetailsObject.viewport;
-  if (playwrightDeviceDetailsObject?.userAgent) userAgent = playwrightDeviceDetailsObject.userAgent;
-
   // Ensure Accept header for non-html content fallback
   extraHTTPHeaders['Accept'] ||= 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
 
-  const launchOptions = getPlaywrightLaunchOptions(browserToRun);
-  const browserContextLaunchOptions = {
-    ...launchOptions,
-    args: [...launchOptions.args, '--headless=new'],
-  };
+  await initModifiedUserAgent(browserToRun, playwrightDeviceDetailsObject, clonedDataDir);
 
   let browserContext;
   try {
     browserContext = await constants.launcher.launchPersistentContext(clonedDataDir, {
-      ...browserContextLaunchOptions,
-      ...(viewport && { viewport }),
-      ...(userAgent && { userAgent }),
       ...(extraHTTPHeaders && { extraHTTPHeaders }),
+      ignoreHTTPSErrors: true,
+      ...getPlaywrightLaunchOptions(browserToRun),
+      ...playwrightDeviceDetailsObject,
     });
   } catch (err) {
     printMessage([`Unable to launch browser\n${err}`], messageOptions);
@@ -393,6 +384,7 @@ const checkUrlConnectivityWithBrowser = async (
     if (error.message.includes('net::ERR_INVALID_AUTH_CREDENTIALS')) {
       res.status = constants.urlCheckStatuses.unauthorised.code;
     } else {
+      console.log(error);
       res.status = constants.urlCheckStatuses.systemError.code;
     }
   } finally {
@@ -513,11 +505,7 @@ export const prepareData = async (argv: Answers): Promise<Data> => {
   // Set exported directory
   if (exportDirectory) {
     constants.exportDirectory = exportDirectory;
-  } else {
-    // Implicitly is the current working directory
-    constants.exportDirectory = process.cwd();
   }
-
   const extraHTTPHeaders = parseHeaders(header);
 
   // Set default username and password for basic auth
@@ -1355,7 +1343,10 @@ export const cloneChromeProfiles = (randomToken: string): string => {
     return destDir;
   }
 
-  return null;
+  consoleLogger.error('Failed to clone Chrome profiles. You may be logged out of your accounts.');
+
+  // For future reference, return a null instead to halt the scan
+  return destDir;
 };
 
 export const cloneChromiumProfiles = (randomToken: string): string => {
@@ -1419,7 +1410,10 @@ export const cloneEdgeProfiles = (randomToken: string): string => {
     return destDir;
   }
 
-  return null;
+  consoleLogger.error('Failed to clone Edge profiles. You may be logged out of your accounts.');
+
+  // For future reference, return a null instead to halt the scan
+  return destDir;
 };
 
 export const deleteClonedProfiles = (browser: string, randomToken: string): void => {

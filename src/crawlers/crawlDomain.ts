@@ -28,7 +28,6 @@ import {
   isDisallowedInRobotsTxt,
   getUrlsFromRobotsTxt,
   waitForPageLoaded,
-  initModifiedUserAgent,
 } from '../constants/common.js';
 import { areLinksEqual, isFollowStrategy } from '../utils.js';
 import {
@@ -115,10 +114,6 @@ const crawlDomain = async ({
   }
 
   ({ requestQueue } = await createCrawleeSubFolders(randomToken));
-
-  if (!fs.existsSync(randomToken)) {
-    fs.mkdirSync(randomToken);
-  }
 
   const pdfDownloads: Promise<void>[] = [];
   const uuidToPdfMapping: Record<string, string> = {};
@@ -343,8 +338,6 @@ const crawlDomain = async ({
   };
 
   let isAbortingScanNow = false;
-
-  await initModifiedUserAgent(browser, playwrightDeviceDetailsObject, userDataDirectory);
 
   const crawler = new crawlee.PlaywrightCrawler({
     launchContext: {
