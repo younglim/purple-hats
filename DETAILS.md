@@ -41,7 +41,7 @@ Note: Level AAA are disabled by default.  Please specify `enable-wcag-aaa` in ru
 | WCAG 1.4.2  | A     | Yes      |             |              |
 | WCAG 1.4.3  | AA    | Yes      |             |              |
 | WCAG 1.4.4  | AA    | Yes      |             |              |
-| WCAG 1.4.6  | AAA   | Yes      |             |              |
+| WCAG 1.4.6  | AAA   |          | Yes         |              |
 | WCAG 1.4.12 | AA    | Yes      |             |              |
 | WCAG 2.1.1  | A     | Yes      |             |              |
 | WCAG 2.1.3  | AAA   | Yes *    |             |              |
