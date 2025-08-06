@@ -1,0 +1,39 @@
+name: Fortify Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  FortifyScan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Download Fortify ScanCentral Client
+        uses: fortify/gha-setup-scancentral-client@v1
+        
+      - name: Package Code + Dependencies
+        run: scancentral package -bt mvn -o package.zip
+        # Use 'gradle' instead of 'mvn' if you're using Gradle
+        
+      - name: Download Fortify on Demand Universal CI Tool
+        uses: fortify/gha-setup-fod-uploader@v1
+        
+      - name: Perform SAST Scan
+        env:
+          FOD_URL: 'https://sgp.fortify.com'
+          FOD_API_KEY: ${{ secrets.FORTIFY_API_KEY }}
+          FOD_RELEASE_ID: ${{ secrets.FORTIFY_RELEASE_ID }}
+        run: java -jar $FOD_UPLOAD_JAR -z package.zip -aurl $FOD_URL -apikey $FOD_API_KEY -rid $FOD_RELEASE_ID -purl $FOD_URL
